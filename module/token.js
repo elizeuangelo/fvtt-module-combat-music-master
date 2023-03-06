@@ -59,9 +59,10 @@ function addTab(tokenConfig, html, data) {
     fillOptions(trackEl, [undefined, ...tracks.map((p) => ({ id: p.id, name: p.name, selected: p === track }))]);
     const footer = html[0].querySelector('footer.sheet-footer');
     footer.insertAdjacentElement('beforebegin', sectionEl);
-    if (html[0].style.width === '480px')
+    if (parseInt(html[0].style.width) < 560)
         html[0].style.width = '560px';
-    tokenConfig.options.width = tokenConfig.position.width = 560;
+    if (tokenConfig.options.width < 560)
+        tokenConfig.options.width = tokenConfig.position.width = 560;
     playlistEl.addEventListener('change', selectPlaylist);
     html[0].addEventListener('submit', onSubmission);
 }

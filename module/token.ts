@@ -78,7 +78,8 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	const footer = html[0].querySelector('footer.sheet-footer');
 	footer!.insertAdjacentElement('beforebegin', sectionEl);
 
-	html[0].style.width = '560px';
+	if (html[0].style.width === '480px') html[0].style.width = '560px';
+	tokenConfig.options.width = tokenConfig.position.width = 560;
 
 	playlistEl.addEventListener('change', selectPlaylist);
 	html[0].addEventListener('submit', onSubmission);

@@ -1,7 +1,7 @@
 import { getSetting, SYSTEM_ID } from './settings.js';
 
 function playCombatMusic(combat: Combat) {
-	if (getSetting('pauseAmbience')) stopAllMusic();
+	if (getSetting('pauseAmbience')) pauseAllMusic();
 	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string) || getHighestPriority(createPriorityList());
 
 	if (sound.parent) sound.parent.playSound(sound);
@@ -35,15 +35,14 @@ function pick<T>(array: T[]): T {
 	return array[~~(Math.random() * array.length)];
 }
 
-let paused: Playlist[] = [];
-function stopAllMusic() {
-	paused = [...game.playlists!.playing];
-	for (const playlist of paused) playlist.stopAll();
+let paused: PlaylistSound[] = [];
+function pauseAllMusic() {
+	paused = game.playlists!.playing.map((p) => p.sounds.contents.filter((p) => p.playing)).flat();
+	for (const sound of paused) sound.update({ playing: false, pausedTime: sound.sound!.currentTime });
 }
 
 function resumePlaylists(combat: Combat) {
-	if (game.combats!.size) return;
-	for (const playlist of paused) playlist.playAll();
+	for (const sound of paused) sound.update({ playing: true });
 	paused = [];
 
 	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string);

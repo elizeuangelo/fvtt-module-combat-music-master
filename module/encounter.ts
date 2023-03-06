@@ -69,7 +69,7 @@ function clickButton() {
 function addButton(encounter: CombatTracker, html: JQuery<HTMLElement>, data: CombatTracker.Data) {
 	const title = html[0].querySelector('.encounter-title.noborder');
 	const btn = $(button)[0];
-	if (!game.combats!.size) btn.setAttribute('disabled', '');
+	if (!game.combat) btn.setAttribute('disabled', '');
 	btn.addEventListener('click', clickButton);
 	title!.insertAdjacentElement('beforebegin', btn);
 }

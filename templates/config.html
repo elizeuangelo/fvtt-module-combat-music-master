@@ -1,0 +1,14 @@
+<form autocomplete="off">
+    <p>Choose your combat playlists:</p>
+    <input type="text" name="search" placeholder="Filter Playlists" value="">
+    <ul class="cmm-playlists cmm-pl-chooser">
+        {{#each playlists}}
+        <li>
+            <input id="{{this.playlist.id}}" name="combat" type="checkbox" {{#if this.active}}checked{{/if}}>
+            <label class="playlist-name {{#if this.default}}star{{/if}}" for="{{this.playlist.id}}">{{this.playlist.name}}</label>
+        </li>
+        {{/each}}
+    </ul>
+    <p><i class="fa fa-star" style="color:darkorange"></i> Default Playlist (priority 1)</p>
+	<button type="submit" name="submit" value="1"><i class="far fa-check"></i> Save Changes</button>
+</form>

@@ -2,7 +2,7 @@ import { getSetting, SYSTEM_ID } from './settings.js';
 
 function playCombatMusic(combat: Combat) {
 	if (getSetting('pauseAmbience')) stopAllMusic();
-	const sound = parseMusic(combat) || getHighestPriority(createPriorityList());
+	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string) || getHighestPriority(createPriorityList());
 
 	if (sound.parent) sound.parent.playSound(sound);
 	else (sound as Playlist).playAll();
@@ -50,17 +50,21 @@ function resumePlaylists(combat: Combat) {
 	for (const playlist of paused) playlist.playAll();
 	paused = [];
 
-	const sound = parseMusic(combat);
+	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string);
 	if (sound) (sound.parent ?? (sound as Playlist)).stopAll();
 }
 
-export function parseMusic(combat: Combat) {
-	const rgx = /(\w+)\.?(\w+)?/.exec(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string);
+export function parseMusic(flag: string) {
+	const rgx = /(\w+)\.?(\w+)?/.exec(flag);
 	if (!rgx) return;
 	const playlist = game.playlists!.get(rgx[1]),
 		sound = playlist?.sounds.get(rgx[2]);
 
 	return sound ?? playlist;
+}
+
+function stringifyMusic(sound?: Playlist | PlaylistSound) {
+	return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
 
 /**
@@ -69,11 +73,17 @@ export function parseMusic(combat: Combat) {
  * @param combat Combat triggering the sound
  */
 export function setCombatMusic(sound?: Playlist | PlaylistSound, combat = game.combat) {
-	combat?.setFlag(SYSTEM_ID, 'overrideMusic', (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '');
+	combat?.setFlag(SYSTEM_ID, 'overrideMusic', stringifyMusic(sound));
+}
+
+export function setTokenPriority(token: TokenDocument, sound?: Playlist | PlaylistSound, priority = 10) {
+	token.setFlag(SYSTEM_ID, 'combatMusic', stringifyMusic(sound));
+	token.setFlag(SYSTEM_ID, 'musicPriority', priority);
 }
 
 window.CombatMusicMaster = {
 	setCombatMusic,
+	setTokenPriority,
 };
 
 Hooks.on('combatStart', playCombatMusic);

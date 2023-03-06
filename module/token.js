@@ -1,3 +1,4 @@
+import { setCombatMusic } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 const section = `<div class="tab" data-group="main" data-tab="music-manager">
@@ -32,10 +33,24 @@ function fillOptions(html, options) {
 }
 function addTab(tokenConfig, html, data) {
     html[0].querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
+    function selectPlaylist(ev) {
+        const playlist = game.playlists.get(ev.target.value);
+        const tracks = playlist?.sounds.contents ?? [];
+        html[0].querySelector('select[name=track]').innerHTML = [undefined, ...tracks].map((track) => createOption(track)).join('');
+    }
+    function onSubmission(ev) {
+        const playlist = game.playlists.get(playlistEl.value);
+        const track = playlist?.sounds.get(trackEl.value);
+        setCombatMusic(track ?? playlist);
+    }
     const sectionEl = $(section)[0];
-    fillOptions(sectionEl.querySelector('select[name=playlist]'), [undefined, ...game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))]);
+    const playlistEl = sectionEl.querySelector('select[name=playlist]');
+    const trackEl = sectionEl.querySelector('select[name=track]');
+    fillOptions(playlistEl, [undefined, ...game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))]);
     const footer = html[0].querySelector('footer.sheet-footer');
     footer.insertAdjacentElement('beforebegin', sectionEl);
     html[0].style.width = '560px';
+    playlistEl.addEventListener('change', selectPlaylist);
+    html[0].addEventListener('submit', onSubmission);
 }
 Hooks.on('renderTokenConfig', addTab);

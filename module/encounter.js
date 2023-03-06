@@ -24,7 +24,7 @@ class CombatTrackerMusicManager extends FormApplication {
         };
     }
     async _updateObject(_event, formData) {
-        const playlist = game.playlists?.get(formData.playlist);
+        const playlist = game.playlists.get(formData.playlist);
         const track = playlist?.sounds.get(formData.track);
         setCombatMusic(track ?? playlist);
     }

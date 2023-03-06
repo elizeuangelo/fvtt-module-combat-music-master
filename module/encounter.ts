@@ -18,7 +18,7 @@ class CombatTrackerMusicManager extends FormApplication<FormApplicationOptions, 
 	 * @param _options
 	 */
 	async getData(_options: any) {
-		const selected = parseMusic(game.combat!);
+		const selected = parseMusic(game.combat!.getFlag(SYSTEM_ID, 'overrideMusic') as string);
 		const playlist = (selected?.parent ?? selected) as Playlist;
 		const track = playlist === selected ? undefined : selected;
 
@@ -38,7 +38,7 @@ class CombatTrackerMusicManager extends FormApplication<FormApplicationOptions, 
 	 * @param formData The form data to be saved
 	 */
 	protected async _updateObject(_event: Event, formData: { playlist: string; track: string }) {
-		const playlist = game.playlists?.get(formData.playlist);
+		const playlist = game.playlists!.get(formData.playlist);
 		const track = playlist?.sounds.get(formData.track);
 		setCombatMusic(track ?? playlist);
 	}

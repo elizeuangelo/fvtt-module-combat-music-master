@@ -1,3 +1,4 @@
+import { setTokenPriority } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
@@ -43,13 +44,35 @@ function fillOptions(html: HTMLElement, options: (SoundOption | undefined)[]) {
 function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: TokenConfig.Data) {
 	html[0].querySelector('nav.sheet-tabs.tabs')!.appendChild($(menu)[0]);
 
+	function selectPlaylist(ev) {
+		const playlist = game.playlists!.get(ev.target.value);
+		const tracks = playlist?.sounds.contents ?? [];
+
+		html[0].querySelector('select[name=track]')!.innerHTML = [undefined, ...tracks].map((track) => createOption(track)).join('');
+	}
+
+	function onSubmission(ev: SubmitEvent) {
+		const playlist = game.playlists!.get(playlistEl.value);
+		const track = playlist?.sounds.get(trackEl.value);
+		const priority = +priorityEl.value;
+
+		setTokenPriority(tokenConfig.token, track || playlist, priority);
+	}
+
 	const sectionEl = $(section)[0];
-	fillOptions(sectionEl.querySelector('select[name=playlist]')!, [undefined, ...game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))]);
+	const playlistEl = sectionEl.querySelector('select[name=playlist]') as HTMLSelectElement;
+	const trackEl = sectionEl.querySelector('select[name=track]') as HTMLSelectElement;
+	const priorityEl = sectionEl.querySelector('input[name=priority]') as HTMLInputElement;
+
+	fillOptions(playlistEl, [undefined, ...game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))]);
 
 	const footer = html[0].querySelector('footer.sheet-footer');
 	footer!.insertAdjacentElement('beforebegin', sectionEl);
 
 	html[0].style.width = '560px';
+
+	playlistEl.addEventListener('change', selectPlaylist);
+	html[0].addEventListener('submit', onSubmission);
 }
 
 Hooks.on('renderTokenConfig', addTab);

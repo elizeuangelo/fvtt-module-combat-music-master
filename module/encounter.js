@@ -48,7 +48,7 @@ function clickButton() {
 function addButton(encounter, html, data) {
     const title = html[0].querySelector('.encounter-title.noborder');
     const btn = $(button)[0];
-    if (!game.combats.size)
+    if (!game.combat)
         btn.setAttribute('disabled', '');
     btn.addEventListener('click', clickButton);
     title.insertAdjacentElement('beforebegin', btn);

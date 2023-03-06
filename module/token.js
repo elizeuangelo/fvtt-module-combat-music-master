@@ -1,4 +1,4 @@
-import { setCombatMusic } from './music-manager.js';
+import { parseMusic, setTokenPriority } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 const section = `<div class="tab" data-group="main" data-tab="music-manager">
@@ -41,12 +41,22 @@ function addTab(tokenConfig, html, data) {
     function onSubmission(ev) {
         const playlist = game.playlists.get(playlistEl.value);
         const track = playlist?.sounds.get(trackEl.value);
-        setCombatMusic(track ?? playlist);
+        const priority = +priorityEl.value;
+        setTokenPriority(tokenConfig.token, track || playlist, priority);
     }
     const sectionEl = $(section)[0];
     const playlistEl = sectionEl.querySelector('select[name=playlist]');
     const trackEl = sectionEl.querySelector('select[name=track]');
-    fillOptions(playlistEl, [undefined, ...game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))]);
+    const priorityEl = sectionEl.querySelector('input[name=priority]');
+    const selected = parseMusic(tokenConfig.token.getFlag(SYSTEM_ID, 'combatMusic'));
+    const playlist = (selected?.parent ?? selected);
+    const track = playlist === selected ? undefined : selected;
+    const tracks = playlist ? playlist.sounds.contents : [];
+    fillOptions(playlistEl, [
+        undefined,
+        ...game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
+    ]);
+    fillOptions(trackEl, [undefined, ...tracks.map((p) => ({ id: p.id, name: p.name, selected: p === track }))]);
     const footer = html[0].querySelector('footer.sheet-footer');
     footer.insertAdjacentElement('beforebegin', sectionEl);
     html[0].style.width = '560px';

@@ -12,7 +12,7 @@ class CombatTrackerMusicManager extends FormApplication {
         });
     }
     async getData(_options) {
-        const selected = parseMusic(game.combat);
+        const selected = parseMusic(game.combat.getFlag(SYSTEM_ID, 'overrideMusic'));
         const playlist = (selected?.parent ?? selected);
         const track = playlist === selected ? undefined : selected;
         const tracks = playlist ? playlist.sounds.contents : [];

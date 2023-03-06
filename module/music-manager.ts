@@ -10,29 +10,25 @@ function playCombatMusic(combat: Combat) {
 }
 
 function createPriorityList() {
-	const combatPlaylists = new Map<Playlist | PlaylistSound, number>(
-		game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => [p, 0])
-	);
+	const combatPlaylists = Object.fromEntries(game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => [p.id, 0]));
 
 	const base = game.playlists!.get(getSetting('defaultPlaylist'));
-	if (base) combatPlaylists.set(base, 1);
+	if (base) combatPlaylists[base.id] = 1;
 
 	for (const combatant of game.combat!.combatants.contents) {
 		if (!combatant.token) continue;
-		const playlist = game.playlists!.get(combatant.token.getFlag(SYSTEM_ID, 'combatPlaylist') as string),
-			music = playlist?.sounds.get(combatant.token.getFlag(SYSTEM_ID, 'combatMusic') as string),
+		const music = combatant.token.getFlag(SYSTEM_ID, 'combatMusic') as string,
 			priority = combatant.token.getFlag(SYSTEM_ID, 'musicPriority') as number;
 
-		const key = (music || playlist)!;
-		if (playlist && (combatPlaylists.get(key) ?? 0) < priority) combatPlaylists.set(key, priority);
+		if (music && (combatPlaylists[music] ?? 0) < priority) combatPlaylists[music] = priority;
 	}
 
 	return combatPlaylists;
 }
 
 function getHighestPriority(map: ReturnType<typeof createPriorityList>) {
-	const max = Math.max(...map.values());
-	return pick([...map].filter(([p, v]) => v === max).map(([p, v]) => p));
+	const max = Math.max(...Object.values(map));
+	return parseMusic(pick([...Object.entries(map)].filter(([p, v]) => v === max).map(([p, v]) => p)))!;
 }
 
 function pick<T>(array: T[]): T {

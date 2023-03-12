@@ -45,3 +45,33 @@
 .combat-sidebar .combat-tracker-header div.encounter-controls .encounter-title {
     margin-left: 0;
 }
+
+.track-selections .track-selection {
+    display: flex;
+    flex-wrap: nowrap;
+    text-align: left;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    border: none;
+}
+
+.track-selections header.track-selection {
+    font-weight: bold;
+}
+
+.track-selections .track-selection > * {
+    margin-right: 4px;
+    flex: 1;
+}
+
+.track-selections .track-selection select {
+    width: 100%;
+}
+
+.track-selections .track-selection-controls {
+    flex: 0 0 32px;
+    margin-right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}

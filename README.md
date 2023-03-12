@@ -1,8 +1,8 @@
 # Foundry VTT - 🎹 Combat Music Master
 
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/elizeuangelo/fvtt-module-combat-music-master)
-![GitHub Releases](https://img.shields.io/github/downloads/elizeuangelo/fvtt-module-combat-music-master/latest/total)
-![GitHub All Releases](https://img.shields.io/github/downloads/elizeuangelo/fvtt-module-combat-music-master/total?label=downloads)
+![GitHub Releases](https://img.shields.io/github/downloads/elizeuangelo/fvtt-module-combat-music-master/latest/combat-music-master.zip)
+![GitHub All Releases](https://img.shields.io/github/downloads/elizeuangelo/fvtt-module-combat-music-master/combat-music-master.zip?label=downloads)
 
 Control your battle music! Automatically play songs amongst your combat playlists when combat starts.
 

@@ -1,31 +1,54 @@
 import { getSetting, SYSTEM_ID } from './settings.js';
+import { getTokenMusic } from './token.js';
 function playCombatMusic(combat) {
     if (getSetting('pauseAmbience'))
         pauseAllMusic();
-    const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic')) || getHighestPriority(createPriorityList());
+    let music = combat.getFlag(SYSTEM_ID, 'overrideMusic');
+    let token = '';
+    if (!music) {
+        const highestPriority = getHighestPriority(createPriorityList());
+        token = highestPriority.token;
+        music = highestPriority.music;
+    }
+    const sound = parseMusic(music);
     if (sound.parent)
         sound.parent.playSound(sound);
     else
         sound.playAll();
-    setCombatMusic(sound.parent ?? sound);
+    setCombatMusic(sound, combat, token);
+}
+export async function updateCombatMusic(combat, music) {
+    const oldMusic = combat.getFlag(SYSTEM_ID, 'overrideMusic');
+    if (oldMusic === music)
+        return;
+    const oldSound = parseMusic(oldMusic);
+    const sound = parseMusic(music);
+    if (oldSound.parent) {
+        oldSound.parent?.stopSound(oldSound);
+    }
+    else
+        await oldSound.stopAll();
+    if (sound.parent)
+        sound.parent.playSound(sound);
+    else
+        sound.playAll();
+    setCombatMusic(sound, combat);
 }
 function createPriorityList() {
-    const combatPlaylists = Object.fromEntries(game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => [p.id, 0]));
-    const base = game.playlists.get(getSetting('defaultPlaylist'));
-    if (base)
-        combatPlaylists[base.id] = 1;
+    const base = getSetting('defaultPlaylist');
+    const combatPlaylists = new Map(game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
     for (const combatant of game.combat.combatants.contents) {
         if (!combatant.token)
             continue;
-        const music = combatant.token.getFlag(SYSTEM_ID, 'combatMusic'), priority = combatant.token.getFlag(SYSTEM_ID, 'musicPriority');
-        if (music && (combatPlaylists[music] ?? 0) < priority)
-            combatPlaylists[music] = priority;
+        const music = getTokenMusic(combatant.token), priority = combatant.token.getFlag(SYSTEM_ID, 'priority') ?? 10, token = combatant.token.id;
+        if (music)
+            combatPlaylists.set({ token, music }, priority);
     }
     return combatPlaylists;
 }
 function getHighestPriority(map) {
-    const max = Math.max(...Object.values(map));
-    return parseMusic(pick([...Object.entries(map)].filter(([p, v]) => v === max).map(([p, v]) => p)));
+    const max = Math.max(...map.values());
+    return pick([...map].filter(([p, v]) => v === max))[0];
 }
 function pick(array) {
     return array[~~(Math.random() * array.length)];
@@ -54,16 +77,29 @@ export function parseMusic(flag) {
 function stringifyMusic(sound) {
     return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
-export function setCombatMusic(sound, combat = game.combat) {
-    combat?.setFlag(SYSTEM_ID, 'overrideMusic', stringifyMusic(sound));
+export function setCombatMusic(sound, combat = game.combat, token) {
+    if (combat) {
+        combat.update({
+            [`flags.${SYSTEM_ID}`]: {
+                overrideMusic: stringifyMusic(sound),
+                token,
+            },
+        });
+    }
 }
-export function setTokenPriority(token, sound, priority = 10) {
-    token.setFlag(SYSTEM_ID, 'combatMusic', stringifyMusic(sound));
-    token.setFlag(SYSTEM_ID, 'musicPriority', priority);
+export function setTokenConfig(token, resource, sounds, priority = 10) {
+    sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
+    token.update({
+        [`flags.${SYSTEM_ID}`]: {
+            resource,
+            priority,
+            musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),
+        },
+    });
 }
 window.CombatMusicMaster = {
     setCombatMusic,
-    setTokenPriority,
+    setTokenConfig,
 };
 Hooks.on('combatStart', playCombatMusic);
 Hooks.on('deleteCombat', resumePlaylists);

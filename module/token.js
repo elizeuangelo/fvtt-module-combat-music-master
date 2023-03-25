@@ -1,4 +1,4 @@
-import { parseMusic, updateCombatMusic, setTokenConfig } from './music-manager.js';
+import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 let section = await getTemplate('modules/combat-music-master/templates/music-section.html');
@@ -19,7 +19,7 @@ function addTab(tokenConfig, html, data) {
         : tokenConfig.token.getBarAttribute('bar1');
     data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
     data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
-    data['musicPriority'] = tokenConfig.token.getFlag(SYSTEM_ID, 'priority');
+    data['musicPriority'] = tokenConfig.token.getFlag(SYSTEM_ID, 'priority') ?? 10;
     html[0].querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
     function selectPlaylist(ev) {
         const playlist = game.playlists.get(ev.target.value);
@@ -28,10 +28,12 @@ function addTab(tokenConfig, html, data) {
     }
     function actionButton(event) {
         event.preventDefault();
+        const priorityEl = sectionEl.querySelector('input[name=priority]');
+        const priority = +priorityEl.value;
         const button = event.currentTarget;
         const action = button.dataset.action;
         game.tooltip.deactivate();
-        const tracks = musicList;
+        const tracks = getMusicList().map(([sound, priority]) => [stringifyMusic(sound), priority]);
         switch (action) {
             case 'addTrack':
                 tracks.push(['', tracks.length === 1 ? 50 : 0]);
@@ -41,13 +43,11 @@ function addTab(tokenConfig, html, data) {
                 tracks.splice(idx, 1);
                 break;
         }
-        tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}.musicList`]: tracks });
+        tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value } });
         menuTab = true;
         tokenConfig.render();
     }
-    function onSubmission(ev) {
-        const priority = +priorityEl.value;
-        const resource = resourceEl.value;
+    function getMusicList() {
         const musicList = [];
         for (const el of musicListEls) {
             const threshold = +el.querySelector('input[name=threshold]').value;
@@ -57,7 +57,12 @@ function addTab(tokenConfig, html, data) {
             const track = playlist?.sounds.get(trackEl.value);
             musicList.push([track || playlist, threshold]);
         }
-        setTokenConfig(tokenConfig.token, resource, musicList, priority);
+        return musicList;
+    }
+    function onSubmission(ev) {
+        const priority = +priorityEl.value;
+        const resource = resourceEl.value;
+        setTokenConfig(tokenConfig.token, resource, getMusicList(), priority);
     }
     const sectionEl = $(section(data, {
         allowProtoMethodsByDefault: true,
@@ -66,6 +71,7 @@ function addTab(tokenConfig, html, data) {
     const priorityEl = sectionEl.querySelector('input[name=priority]');
     const resourceEl = sectionEl.querySelector('select[name=tracked-resource');
     const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection');
+    const formEl = (html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form'));
     const combatPlaylists = game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
     for (let i = 0; i < musicListEls.length; i++) {
         const el = musicListEls[i];
@@ -93,7 +99,7 @@ function addTab(tokenConfig, html, data) {
     menuTab = false;
     sectionEl.querySelectorAll('a.action-button').forEach((el) => el.addEventListener('click', actionButton));
     resourceEl.addEventListener('change', tokenConfig._onBarChange.bind(tokenConfig));
-    html[0].addEventListener('submit', onSubmission);
+    formEl.addEventListener('submit', onSubmission);
 }
 function resourceTracker(token) {
     const combatant = token.combatant;

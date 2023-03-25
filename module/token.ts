@@ -1,4 +1,4 @@
-import { parseMusic, updateCombatMusic, setTokenConfig } from './music-manager.js';
+import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
@@ -30,7 +30,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 		: tokenConfig.token.getBarAttribute('bar1');
 	data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
 	data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
-	data['musicPriority'] = tokenConfig.token.getFlag(SYSTEM_ID, 'priority') as number | undefined;
+	data['musicPriority'] = (tokenConfig.token.getFlag(SYSTEM_ID, 'priority') as number | undefined) ?? 10;
 
 	html[0].querySelector('nav.sheet-tabs.tabs')!.appendChild($(menu)[0]);
 
@@ -43,12 +43,15 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 
 	function actionButton(event: PointerEvent) {
 		event.preventDefault();
+
+		const priorityEl = sectionEl.querySelector('input[name=priority]') as HTMLInputElement;
+		const priority = +priorityEl.value;
 		const button = event.currentTarget as HTMLButtonElement;
 		const action = button.dataset.action;
 		game.tooltip.deactivate();
 
 		// Get pending changes to modes
-		const tracks = musicList;
+		const tracks = getMusicList().map(([sound, priority]) => [stringifyMusic(sound), priority]);
 
 		// Manipulate the array
 		switch (action) {
@@ -62,15 +65,12 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 		}
 
 		// Preview the detection mode change
-		tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}.musicList`]: tracks });
+		tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value } });
 		menuTab = true;
 		tokenConfig.render();
 	}
 
-	function onSubmission(ev: SubmitEvent) {
-		const priority = +priorityEl.value;
-		const resource = resourceEl.value;
-
+	function getMusicList() {
 		const musicList: [Playlist | PlaylistSound, number][] = [];
 
 		for (const el of musicListEls) {
@@ -83,8 +83,13 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 
 			musicList.push([track || playlist, threshold]);
 		}
+		return musicList;
+	}
 
-		setTokenConfig(tokenConfig.token, resource, musicList, priority);
+	function onSubmission(ev: SubmitEvent) {
+		const priority = +priorityEl.value;
+		const resource = resourceEl.value;
+		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority);
 	}
 
 	const sectionEl = $(
@@ -97,6 +102,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	const priorityEl = sectionEl.querySelector('input[name=priority]') as HTMLInputElement;
 	const resourceEl = sectionEl.querySelector('select[name=tracked-resource') as HTMLSelectElement;
 	const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection') as NodeListOf<HTMLFieldSetElement>;
+	const formEl = (html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form')) as HTMLFormElement;
 
 	const combatPlaylists = game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
 
@@ -132,7 +138,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 
 	sectionEl.querySelectorAll('a.action-button').forEach((el) => el.addEventListener('click', actionButton));
 	resourceEl.addEventListener('change', tokenConfig._onBarChange.bind(tokenConfig));
-	html[0].addEventListener('submit', onSubmission);
+	formEl.addEventListener('submit', onSubmission);
 }
 
 function resourceTracker(token: TokenDocument) {

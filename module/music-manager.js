@@ -74,7 +74,7 @@ export function parseMusic(flag) {
     const playlist = game.playlists.get(rgx[1]), sound = playlist?.sounds.get(rgx[2]);
     return sound ?? playlist;
 }
-function stringifyMusic(sound) {
+export function stringifyMusic(sound) {
     return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
 export function setCombatMusic(sound, combat = game.combat, token) {

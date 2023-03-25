@@ -69,7 +69,7 @@ Hooks.on('setup', () => {
     game.settings.registerMenu(SYSTEM_ID, 'combatMusicMenu', {
         name: 'Combat Music Master',
         label: 'Combat Playlists',
-        hint: 'Select wich ones are your combat playlists.',
+        hint: 'Select which ones are your combat playlists.',
         icon: 'fas fa-music',
         type: PlaylistManager,
         restricted: true,

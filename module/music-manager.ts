@@ -88,7 +88,7 @@ export function parseMusic(flag: string) {
 	return sound ?? playlist;
 }
 
-function stringifyMusic(sound?: Playlist | PlaylistSound) {
+export function stringifyMusic(sound?: Playlist | PlaylistSound) {
 	return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
 

@@ -82,7 +82,7 @@ Hooks.on('setup', () => {
 	game.settings.registerMenu(SYSTEM_ID, 'combatMusicMenu', {
 		name: 'Combat Music Master',
 		label: 'Combat Playlists', // The text label used in the button
-		hint: 'Select wich ones are your combat playlists.',
+		hint: 'Select which ones are your combat playlists.',
 		icon: 'fas fa-music', // A Font Awesome icon used in the submenu button
 		type: PlaylistManager, // A FormApplication subclass which should be created
 		restricted: true, // Restrict this submenu to gamemaster only?

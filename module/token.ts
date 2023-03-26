@@ -1,4 +1,4 @@
-import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic } from './music-manager.js';
+import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic, getCombatMusic } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
@@ -107,7 +107,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection') as NodeListOf<HTMLFieldSetElement>;
 	const formEl = (html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form')) as HTMLFormElement;
 
-	const combatPlaylists = game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
+	const combatPlaylists = getCombatMusic();
 
 	for (let i = 0; i < musicListEls.length; i++) {
 		const el = musicListEls[i];
@@ -168,4 +168,4 @@ export function getTokenMusic(token: TokenDocument) {
 }
 
 Hooks.on('renderTokenConfig', addTab);
-Hooks.on('updateToken', resourceTracker);
+if (game.user!.isGM) Hooks.on('updateToken', resourceTracker);

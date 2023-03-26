@@ -2,6 +2,7 @@ import { getSetting, SYSTEM_ID } from './settings.js';
 import { getTokenMusic } from './token.js';
 
 function playCombatMusic(combat: Combat) {
+	if (getCombatMusic().length === 0) return;
 	if (getSetting('pauseAmbience')) pauseAllMusic();
 	updateTurnMusic(combat);
 }
@@ -27,9 +28,7 @@ export async function updateCombatMusic(combat: Combat, music: string, token?: s
 
 function createPriorityList(tokenId: string) {
 	const base = getSetting('defaultPlaylist');
-	const combatPlaylists = new Map(
-		game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat')).map((p) => [{ token: '', music: p.id }, +(p.id === base)])
-	);
+	const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
 
 	for (const combatant of game.combat!.combatants.contents) {
 		if (!combatant.token) continue;
@@ -108,7 +107,12 @@ export function setTokenConfig(token: TokenDocument, resource: string, sounds?: 
 	});
 }
 
+export function getCombatMusic() {
+	return game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
+}
+
 function updateTurnMusic(combat: Combat) {
+	if (getCombatMusic().length === 0) return;
 	let music = combat.started ? undefined : (combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined);
 	let token: string = '';
 
@@ -128,7 +132,9 @@ window.CombatMusicMaster = {
 	setTokenConfig,
 };
 
-Hooks.on('combatStart', playCombatMusic);
-Hooks.on('combatTurn', updateTurnMusic);
-Hooks.on('combatRound', updateTurnMusic);
-Hooks.on('deleteCombat', resumePlaylists);
+if (game.user!.isGM) {
+	Hooks.on('combatStart', playCombatMusic);
+	Hooks.on('combatTurn', updateTurnMusic);
+	Hooks.on('combatRound', updateTurnMusic);
+	Hooks.on('deleteCombat', resumePlaylists);
+}

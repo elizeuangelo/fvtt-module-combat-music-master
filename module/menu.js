@@ -21,8 +21,13 @@ export class PlaylistManager extends FormApplication {
     }
     async _updateObject(_event, formData) {
         const playlists = game.playlists.contents;
-        if (playlists.length !== formData.combat.length)
-            throw new Error(`Playlists changed`);
+        if (formData.combat === undefined)
+            return;
+        if (typeof formData.combat === 'boolean')
+            formData.combat = [formData.combat];
+        if (playlists.length !== formData.combat.length) {
+            ui.notifications.error(`Playlists changed while configuration window was on.`);
+        }
         for (let i = 0; i < playlists.length; i++) {
             const playlist = playlists[i], active = formData.combat[i];
             if (playlist.getFlag(SYSTEM_ID, 'combat') != active)

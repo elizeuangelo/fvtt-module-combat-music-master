@@ -20,6 +20,7 @@ function addTab(tokenConfig, html, data) {
     data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
     data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
     data['musicPriority'] = tokenConfig.token.getFlag(SYSTEM_ID, 'priority') ?? 10;
+    data['turnOnly'] = tokenConfig.token.getFlag(SYSTEM_ID, 'turnOnly') ?? false;
     html[0].querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
     function selectPlaylist(ev) {
         const playlist = game.playlists.get(ev.target.value);
@@ -43,7 +44,7 @@ function addTab(tokenConfig, html, data) {
                 tracks.splice(idx, 1);
                 break;
         }
-        tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value } });
+        tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value, turnOnly: turnOnlyEl.checked } });
         menuTab = true;
         tokenConfig.render();
     }
@@ -62,13 +63,15 @@ function addTab(tokenConfig, html, data) {
     function onSubmission(ev) {
         const priority = +priorityEl.value;
         const resource = resourceEl.value;
-        setTokenConfig(tokenConfig.token, resource, getMusicList(), priority);
+        const turnOnly = turnOnlyEl.checked;
+        setTokenConfig(tokenConfig.token, resource, getMusicList(), priority, turnOnly);
     }
     const sectionEl = $(section(data, {
         allowProtoMethodsByDefault: true,
         allowProtoPropertiesByDefault: true,
     }))[0];
     const priorityEl = sectionEl.querySelector('input[name=priority]');
+    const turnOnlyEl = sectionEl.querySelector('input[name=turn-only]');
     const resourceEl = sectionEl.querySelector('select[name=tracked-resource');
     const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection');
     const formEl = (html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form'));

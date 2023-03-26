@@ -7,6 +7,11 @@
         <p class="notes">The priority this token's playlist will compete against the others.</p>
     </div>
 
+    <div class="form-group">
+        <label>Turn Only</label>
+        <input type="checkbox" name="turn-only" {{#if turnOnly}}checked{{/if}}>
+        <p class="hint">Wether the track should only play on the token's turn. Priority is still respected.</p>
+    </div>
 
     <div class="form-group">
         <label>Tracked Resource</label>

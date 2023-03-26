@@ -31,6 +31,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
 	data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
 	data['musicPriority'] = (tokenConfig.token.getFlag(SYSTEM_ID, 'priority') as number | undefined) ?? 10;
+	data['turnOnly'] = (tokenConfig.token.getFlag(SYSTEM_ID, 'turnOnly') as boolean | undefined) ?? false;
 
 	html[0].querySelector('nav.sheet-tabs.tabs')!.appendChild($(menu)[0]);
 
@@ -65,7 +66,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 		}
 
 		// Preview the detection mode change
-		tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value } });
+		tokenConfig._previewChanges({ [`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value, turnOnly: turnOnlyEl.checked } });
 		menuTab = true;
 		tokenConfig.render();
 	}
@@ -89,7 +90,8 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	function onSubmission(ev: SubmitEvent) {
 		const priority = +priorityEl.value;
 		const resource = resourceEl.value;
-		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority);
+		const turnOnly = turnOnlyEl.checked;
+		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority, turnOnly);
 	}
 
 	const sectionEl = $(
@@ -100,6 +102,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	)[0];
 
 	const priorityEl = sectionEl.querySelector('input[name=priority]') as HTMLInputElement;
+	const turnOnlyEl = sectionEl.querySelector('input[name=turn-only]') as HTMLInputElement;
 	const resourceEl = sectionEl.querySelector('select[name=tracked-resource') as HTMLSelectElement;
 	const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection') as NodeListOf<HTMLFieldSetElement>;
 	const formEl = (html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form')) as HTMLFormElement;

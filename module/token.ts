@@ -129,11 +129,10 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	footer!.insertAdjacentElement('beforebegin', sectionEl);
 
 	if (html[0].classList.contains('app')) {
-		const width = parseInt(html[0].style.width);
-		if (width < 560) {
-			html[0].style.width = '560px';
-			tokenConfig.options.width = tokenConfig.position.width = 560;
-		}
+		const width = tokenConfig.options.width! + 80;
+
+		html[0].style.width = `${width}px`;
+		tokenConfig.position.width = width;
 	}
 
 	if (menuTab) tokenConfig.activateTab('music-manager');

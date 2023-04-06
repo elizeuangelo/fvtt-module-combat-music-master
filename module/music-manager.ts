@@ -14,7 +14,13 @@ export async function updateCombatMusic(combat: Combat, music: string, token?: s
 	const oldSound = parseMusic(oldMusic ?? '');
 	const sound = parseMusic(music)!;
 
-	if (oldSound) {
+	if ('error' in sound) {
+		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
+		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
+		return;
+	}
+
+	if (!('error' in oldSound)) {
 		if (oldSound.parent) {
 			oldSound.parent?.stopSound(oldSound);
 		} else await (oldSound as Playlist).stopAll();
@@ -62,16 +68,16 @@ function resumePlaylists(combat: Combat) {
 	paused = [];
 
 	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string);
-	if (sound) (sound.parent ?? (sound as Playlist)).stopAll();
+	if (!('error' in sound)) (sound.parent ?? (sound as Playlist)).stopAll();
 }
 
 export function parseMusic(flag: string) {
 	const rgx = /(\w+)\.?(\w+)?/.exec(flag);
-	if (!rgx) return;
+	if (!rgx) return { error: 'invalid flag' } as const;
 	const playlist = game.playlists!.get(rgx[1]),
 		sound = playlist?.sounds.get(rgx[2]);
 
-	return sound ?? playlist;
+	return sound ?? playlist ?? ({ error: 'not found', rgx } as const);
 }
 
 export function stringifyMusic(sound?: Playlist | PlaylistSound) {

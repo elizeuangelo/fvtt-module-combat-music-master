@@ -81,7 +81,7 @@ function addTab(tokenConfig, html, data) {
         const playlistEl = el.querySelector('select[name=playlist]');
         const trackEl = el.querySelector('select[name=track]');
         const selected = parseMusic(musicList[i][0]);
-        const playlist = (selected?.parent ?? selected);
+        const playlist = 'error' in selected ? undefined : (selected?.parent ?? selected);
         const track = playlist === selected ? undefined : selected;
         const tracks = playlist ? playlist.sounds.contents : [];
         fillOptions(playlistEl, [undefined, ...combatPlaylists.map((p) => ({ id: p.id, name: p.name, selected: p === playlist }))]);

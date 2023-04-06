@@ -116,7 +116,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 		const trackEl = el.querySelector('select[name=track]') as HTMLSelectElement;
 
 		const selected = parseMusic(musicList[i][0]);
-		const playlist = (selected?.parent ?? selected) as Playlist;
+		const playlist = 'error' in selected ? undefined : ((selected?.parent ?? selected) as Playlist);
 		const track = playlist === selected ? undefined : selected;
 		const tracks = playlist ? playlist.sounds.contents : [];
 

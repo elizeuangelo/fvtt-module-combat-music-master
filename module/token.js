@@ -115,7 +115,7 @@ export function getTokenMusic(token) {
     const musicList = token.getFlag(SYSTEM_ID, 'musicList');
     if (!musicList)
         return;
-    const attrThreshold = attribute.max === 0 ? 100 : (100 * attribute.value) / attribute.max;
+    const attrThreshold = attribute === undefined || attribute.max === 0 ? 100 : (100 * attribute.value) / attribute.max;
     for (let i = musicList.length; i > 0; i--) {
         const [music, threshold] = musicList[i - 1];
         if (attrThreshold <= threshold) {

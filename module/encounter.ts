@@ -1,4 +1,4 @@
-import { parseMusic, setCombatMusic } from './music-manager.js';
+import { parseMusic, setCombatMusic, stringifyMusic, updateCombatMusic, updateTurnMusic } from './music-manager.js';
 import { SYSTEM_ID } from './settings.js';
 import { createOption } from './token.js';
 
@@ -40,7 +40,13 @@ class CombatTrackerMusicManager extends FormApplication<FormApplicationOptions, 
 	protected async _updateObject(_event: Event, formData: { playlist: string; track: string }) {
 		const playlist = game.playlists!.get(formData.playlist);
 		const track = playlist?.sounds.get(formData.track);
-		setCombatMusic(track ?? playlist);
+		const sound = stringifyMusic(track ?? playlist);
+
+		game.combat
+			?.update({
+				[`flags.${SYSTEM_ID}.overrideMusic`]: sound,
+			})
+			.then(() => updateTurnMusic(game.combat!));
 	}
 
 	protected _activateCoreListeners(html: JQuery<HTMLElement>): void {
@@ -50,7 +56,9 @@ class CombatTrackerMusicManager extends FormApplication<FormApplicationOptions, 
 			const playlist = game.playlists!.get(ev.target.value);
 			const tracks = playlist?.sounds.contents ?? [];
 
-			html[0].querySelector('select[name=track]')!.innerHTML = [undefined, ...tracks].map((track) => createOption(track)).join('');
+			html[0].querySelector('select[name=track]')!.innerHTML = [undefined, ...tracks]
+				.map((track) => createOption(track))
+				.join('');
 		}
 
 		html[0].querySelector('select[name=playlist]')!.addEventListener('change', selectPlaylist);

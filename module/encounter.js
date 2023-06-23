@@ -31,7 +31,10 @@ class CombatTrackerMusicManager extends FormApplication {
             ?.update({
             [`flags.${SYSTEM_ID}.overrideMusic`]: sound,
         })
-            .then(() => updateTurnMusic(game.combat));
+            .then(() => {
+            if (game.combat.started)
+                updateTurnMusic(game.combat);
+        });
     }
     _activateCoreListeners(html) {
         super._activateCoreListeners(html);

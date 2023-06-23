@@ -8,7 +8,7 @@ function playCombatMusic(combat) {
     updateTurnMusic(combat);
 }
 export async function updateCombatMusic(combat, music, token) {
-    const oldMusic = combat.getFlag(SYSTEM_ID, 'overrideMusic');
+    const oldMusic = combat._combatMusic;
     if (oldMusic === music)
         return;
     const oldSound = parseMusic(oldMusic ?? '');
@@ -31,6 +31,7 @@ export async function updateCombatMusic(combat, music, token) {
         sound.parent.playSound(sound);
     else
         sound.playAll();
+    combat._combatMusic = music;
     setCombatMusic(sound, combat, token);
 }
 function createPriorityList(tokenId) {
@@ -62,9 +63,10 @@ function resumePlaylists(combat) {
     for (const sound of paused)
         sound.update({ playing: true });
     paused = [];
-    const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic'));
+    const sound = parseMusic(combat._combatMusic);
     if (!('error' in sound))
         (sound.parent ?? sound).stopAll();
+    combat._combatMusic = '';
 }
 export function parseMusic(flag) {
     const rgx = /(\w+)\.?(\w+)?/.exec(flag);
@@ -80,7 +82,7 @@ export function setCombatMusic(sound, combat = game.combat, token) {
     if (combat) {
         combat.update({
             [`flags.${SYSTEM_ID}`]: {
-                overrideMusic: stringifyMusic(sound),
+                currentMusic: stringifyMusic(sound),
                 token,
             },
         });
@@ -100,19 +102,20 @@ export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly 
 export function getCombatMusic() {
     return game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
 }
-function updateTurnMusic(combat) {
+export function updateTurnMusic(combat) {
     if (getCombatMusic().length === 0)
         return;
-    let music = combat.started ? undefined : combat.getFlag(SYSTEM_ID, 'overrideMusic');
+    let music = combat.getFlag(SYSTEM_ID, 'overrideMusic');
     let token = '';
     const turn = combat.started === false ? 0 : (combat.turn + 1) % combat.turns.length;
     const nextCombatant = combat.turns[turn];
     if (!music) {
-        const highestPriority = getHighestPriority(createPriorityList(nextCombatant.tokenId));
+        const highestPriority = getHighestPriority(createPriorityList(nextCombatant?.tokenId));
         token = highestPriority.token;
         music = highestPriority.music;
     }
-    updateCombatMusic(combat, music, token);
+    if (music)
+        updateCombatMusic(combat, music, token);
 }
 window.CombatMusicMaster = {
     setCombatMusic,

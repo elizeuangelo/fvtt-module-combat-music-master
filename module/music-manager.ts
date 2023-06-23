@@ -8,7 +8,7 @@ function playCombatMusic(combat: Combat) {
 }
 
 export async function updateCombatMusic(combat: Combat, music: string, token?: string) {
-	const oldMusic = combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined;
+	const oldMusic = combat._combatMusic;
 	if (oldMusic === music) return;
 
 	const oldSound = parseMusic(oldMusic ?? '');
@@ -29,10 +29,11 @@ export async function updateCombatMusic(combat: Combat, music: string, token?: s
 	if (sound.parent) sound.parent.playSound(sound);
 	else (sound as Playlist).playAll();
 
+	combat._combatMusic = music;
 	setCombatMusic(sound, combat, token);
 }
 
-function createPriorityList(tokenId: string) {
+function createPriorityList(tokenId: string | undefined) {
 	const base = getSetting('defaultPlaylist');
 	const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
 
@@ -42,7 +43,8 @@ function createPriorityList(tokenId: string) {
 			priority = (combatant.token.getFlag(SYSTEM_ID, 'priority') as number | undefined) ?? 10,
 			token = combatant.token.id!;
 
-		if (music && (combatant.token.getFlag(SYSTEM_ID, 'turnOnly') === false || token === tokenId)) combatPlaylists.set({ token, music }, priority);
+		if (music && (combatant.token.getFlag(SYSTEM_ID, 'turnOnly') === false || token === tokenId))
+			combatPlaylists.set({ token, music }, priority);
 	}
 
 	return combatPlaylists;
@@ -67,8 +69,9 @@ function resumePlaylists(combat: Combat) {
 	for (const sound of paused) sound.update({ playing: true });
 	paused = [];
 
-	const sound = parseMusic(combat.getFlag(SYSTEM_ID, 'overrideMusic') as string);
+	const sound = parseMusic(combat._combatMusic);
 	if (!('error' in sound)) (sound.parent ?? (sound as Playlist)).stopAll();
+	combat._combatMusic = '';
 }
 
 export function parseMusic(flag: string) {
@@ -93,14 +96,20 @@ export function setCombatMusic(sound?: Playlist | PlaylistSound, combat: Combat 
 	if (combat) {
 		combat.update({
 			[`flags.${SYSTEM_ID}`]: {
-				overrideMusic: stringifyMusic(sound),
+				currentMusic: stringifyMusic(sound),
 				token,
 			},
 		});
 	}
 }
 
-export function setTokenConfig(token: TokenDocument, resource: string, sounds?: [Playlist | PlaylistSound, number][], priority = 10, turnOnly = false) {
+export function setTokenConfig(
+	token: TokenDocument,
+	resource: string,
+	sounds?: [Playlist | PlaylistSound, number][],
+	priority = 10,
+	turnOnly = false
+) {
 	sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
 
 	token.update({
@@ -117,20 +126,19 @@ export function getCombatMusic() {
 	return game.playlists!.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
 }
 
-function updateTurnMusic(combat: Combat) {
+export function updateTurnMusic(combat: Combat) {
 	if (getCombatMusic().length === 0) return;
-	let music = combat.started ? undefined : (combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined);
+	let music = combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined;
 	let token: string = '';
 
 	const turn = combat.started === false ? 0 : (combat.turn! + 1) % combat.turns.length;
 	const nextCombatant = combat.turns[turn];
 	if (!music) {
-		const highestPriority = getHighestPriority(createPriorityList(nextCombatant.tokenId!));
-
+		const highestPriority = getHighestPriority(createPriorityList(nextCombatant?.tokenId!));
 		token = highestPriority.token;
 		music = highestPriority.music;
 	}
-	updateCombatMusic(combat, music, token);
+	if (music) updateCombatMusic(combat, music, token);
 }
 
 window.CombatMusicMaster = {

@@ -13,13 +13,10 @@ async function pause(sound: PlaylistSound) {
 	sound.update({ playing: false, pausedTime: sound.sound!.currentTime });
 }
 async function resume(sound: PlaylistSound) {
-	if (!sound.pausedTime) return sound.parent!.playSound(sound);
-
+	sound.update({ playing: true });
 	const idx = combatPaused.indexOf(sound);
 	if (idx === -1) return;
 	combatPaused.splice(idx, 1);
-
-	sound.update({ playing: true });
 }
 
 export async function updateCombatMusic(combat: Combat, music: string, token?: string) {
@@ -86,15 +83,20 @@ function pauseAllMusic() {
 }
 
 function resumePlaylists(combat: Combat) {
-	for (const sound of paused) sound.update({ playing: true });
-	paused = [];
-
-	combatPaused.forEach((sound) => sound.parent!.stopSound(sound));
+	combatPaused.forEach((sound) => {
+		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
+	});
 	combatPaused = [];
 
 	const sound = parseMusic(combat._combatMusic);
-	if (!('error' in sound)) (sound.parent ?? (sound as Playlist)).stopAll();
+	if (!('error' in sound)) {
+		if (sound.documentName === 'Playlist') sound.stopAll();
+		else sound.update({ playing: false, pausedTime: null });
+	}
 	combat._combatMusic = '';
+
+	for (const sound of paused) sound.update({ playing: true });
+	paused = [];
 }
 
 export function parseMusic(flag: string) {

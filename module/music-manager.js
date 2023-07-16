@@ -21,8 +21,6 @@ async function resume(sound) {
 }
 export async function updateCombatMusic(combat, music, token) {
     const oldMusic = combat._combatMusic;
-    if (oldMusic === music)
-        return;
     const oldSound = parseMusic(oldMusic ?? '');
     const sound = parseMusic(music);
     if ('error' in sound) {
@@ -32,23 +30,25 @@ export async function updateCombatMusic(combat, music, token) {
             ui.notifications.error('Bad configuration.');
         return;
     }
-    if (!('error' in oldSound)) {
-        if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound')
-            await pause(oldSound);
-        else {
-            if (oldSound.documentName === 'PlaylistSound')
-                await oldSound.parent.stopSound(oldSound);
-            else
-                await oldSound.stopAll();
+    if (oldMusic !== music) {
+        if (!('error' in oldSound)) {
+            if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound')
+                await pause(oldSound);
+            else {
+                if (oldSound.documentName === 'PlaylistSound')
+                    await oldSound.parent.stopSound(oldSound);
+                else
+                    await oldSound.stopAll();
+            }
         }
-    }
-    if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound')
-        resume(sound);
-    else {
-        if (sound.documentName === 'PlaylistSound')
-            sound.parent.playSound(sound);
-        else
-            sound.playAll();
+        if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound')
+            resume(sound);
+        else {
+            if (sound.documentName === 'PlaylistSound')
+                sound.parent.playSound(sound);
+            else
+                sound.playAll();
+        }
     }
     combat._combatMusic = music;
     setCombatMusic(sound, combat, token);
@@ -65,11 +65,11 @@ function createPriorityList(tokenId) {
     }
     return combatPlaylists;
 }
-function getHighestPriority(map) {
+export function getHighestPriority(map) {
     const max = Math.max(...map.values());
     return [...map].filter(([p, v]) => v === max).map(([p, v]) => p);
 }
-function pick(array) {
+export function pick(array) {
     return array[~~(Math.random() * array.length)];
 }
 let paused = [];
@@ -116,10 +116,11 @@ export function setCombatMusic(sound, combat = game.combat, token) {
         });
     }
 }
-export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false) {
+export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
     sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
     token.update({
         [`flags.${SYSTEM_ID}`]: {
+            active,
             resource,
             priority,
             musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),

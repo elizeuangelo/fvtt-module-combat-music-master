@@ -21,7 +21,6 @@ async function resume(sound: PlaylistSound) {
 
 export async function updateCombatMusic(combat: Combat, music: string, token?: string) {
 	const oldMusic = combat._combatMusic;
-	if (oldMusic === music) return;
 
 	const oldSound = parseMusic(oldMusic ?? '');
 	const sound = parseMusic(music)!;
@@ -32,18 +31,20 @@ export async function updateCombatMusic(combat: Combat, music: string, token?: s
 		return;
 	}
 
-	if (!('error' in oldSound)) {
-		if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
-		else {
-			if (oldSound.documentName === 'PlaylistSound') await oldSound.parent!.stopSound(oldSound);
-			else await oldSound.stopAll();
+	if (oldMusic !== music) {
+		if (!('error' in oldSound)) {
+			if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
+			else {
+				if (oldSound.documentName === 'PlaylistSound') await oldSound.parent!.stopSound(oldSound);
+				else await oldSound.stopAll();
+			}
 		}
-	}
 
-	if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
-	else {
-		if (sound.documentName === 'PlaylistSound') sound.parent!.playSound(sound);
-		else sound.playAll();
+		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
+		else {
+			if (sound.documentName === 'PlaylistSound') sound.parent!.playSound(sound);
+			else sound.playAll();
+		}
 	}
 
 	combat._combatMusic = music;
@@ -67,12 +68,12 @@ function createPriorityList(tokenId: string | undefined) {
 	return combatPlaylists;
 }
 
-function getHighestPriority(map: ReturnType<typeof createPriorityList>) {
+export function getHighestPriority(map: ReturnType<typeof createPriorityList>) {
 	const max = Math.max(...map.values());
 	return [...map].filter(([p, v]) => v === max).map(([p, v]) => p);
 }
 
-function pick<T>(array: T[]): T {
+export function pick<T>(array: T[]): T {
 	return array[~~(Math.random() * array.length)];
 }
 
@@ -133,12 +134,14 @@ export function setTokenConfig(
 	resource: string,
 	sounds?: [Playlist | PlaylistSound, number][],
 	priority = 10,
-	turnOnly = false
+	turnOnly = false,
+	active = false
 ) {
 	sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
 
 	token.update({
 		[`flags.${SYSTEM_ID}`]: {
+			active,
 			resource,
 			priority,
 			musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),

@@ -1,5 +1,13 @@
-import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic, getCombatMusic } from './music-manager.js';
-import { SYSTEM_ID } from './settings.js';
+import {
+	parseMusic,
+	updateCombatMusic,
+	setTokenConfig,
+	stringifyMusic,
+	getCombatMusic,
+	getHighestPriority,
+	pick,
+} from './music-manager.js';
+import { SYSTEM_ID, getSetting } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 let section = await getTemplate('modules/combat-music-master/templates/music-section.html');
@@ -32,6 +40,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
 	data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
 	data['musicPriority'] = (token.getFlag(SYSTEM_ID, 'priority') as number | undefined) ?? 10;
+	data['musicActive'] = (token.getFlag(SYSTEM_ID, 'active') as boolean | undefined) ?? false;
 	data['turnOnly'] = (token.getFlag(SYSTEM_ID, 'turnOnly') as boolean | undefined) ?? false;
 
 	html[0].querySelector('nav.sheet-tabs.tabs')!.appendChild($(menu)[0]);
@@ -93,10 +102,11 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	}
 
 	function onSubmission(ev: SubmitEvent) {
+		const active = activeEl.checked;
 		const priority = +priorityEl.value;
 		const resource = resourceEl.value;
 		const turnOnly = turnOnlyEl.checked;
-		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority, turnOnly);
+		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority, turnOnly, active);
 	}
 
 	const sectionEl = $(
@@ -106,6 +116,7 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 		})
 	)[0];
 
+	const activeEl = sectionEl.querySelector('input[name=music-active]') as HTMLInputElement;
 	const priorityEl = sectionEl.querySelector('input[name=priority]') as HTMLInputElement;
 	const turnOnlyEl = sectionEl.querySelector('input[name=turn-only]') as HTMLInputElement;
 	const resourceEl = sectionEl.querySelector('select[name=tracked-resource') as HTMLSelectElement;
@@ -152,16 +163,22 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 }
 
 function resourceTracker(actor: Actor) {
-	const token = actor.token;
-	if (!token) return;
-	const combatant = token.combatant;
-	if (!combatant || !combatant.combat!.started || combatant.combat!.getFlag(SYSTEM_ID, 'token') !== token.id) return;
+	if (!game.combat?.started) return;
+
+	const token = game.combat?.combatant?.token;
+	if (!token || token.actor !== actor) return;
+
+	const combatant = token.combatant!;
+	if (combatant.combat!.getFlag(SYSTEM_ID, 'token') !== token.id) return;
 
 	const music = getTokenMusic(token);
 	if (music) updateCombatMusic(combatant.combat!, music);
 }
 
 export function getTokenMusic(token: TokenDocument) {
+	const active = token.getFlag(SYSTEM_ID, 'active');
+	if (!active) return;
+
 	const attribute: { value: number; max: number } =
 		foundry.utils.getProperty(token.actor!.system, token.getFlag(SYSTEM_ID, 'resource') as string) ??
 		token.getBarAttribute('bar1');
@@ -173,6 +190,11 @@ export function getTokenMusic(token: TokenDocument) {
 	for (let i = musicList.length; i > 0; i--) {
 		const [music, threshold] = musicList[i - 1];
 		if (attrThreshold <= threshold) {
+			if (music === '') {
+				const base = getSetting('defaultPlaylist');
+				const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
+				return pick(getHighestPriority(combatPlaylists)).music;
+			}
 			return music;
 		}
 	}

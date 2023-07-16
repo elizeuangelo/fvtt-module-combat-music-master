@@ -151,7 +151,9 @@ function addTab(tokenConfig: TokenConfig, html: JQuery<HTMLElement>, data: Token
 	formEl.addEventListener('submit', onSubmission);
 }
 
-function resourceTracker(token: TokenDocument) {
+function resourceTracker(actor: Actor) {
+	const token = actor.token;
+	if (!token) return;
 	const combatant = token.combatant;
 	if (!combatant || !combatant.combat!.started || combatant.combat!.getFlag(SYSTEM_ID, 'token') !== token.id) return;
 
@@ -177,4 +179,4 @@ export function getTokenMusic(token: TokenDocument) {
 }
 
 Hooks.on('renderTokenConfig', addTab);
-if (game.user!.isGM) Hooks.on('updateToken', resourceTracker);
+if (game.user!.isGM) Hooks.on('updateActor', resourceTracker);

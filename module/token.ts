@@ -160,10 +160,9 @@ function resourceTracker(token: TokenDocument) {
 }
 
 export function getTokenMusic(token: TokenDocument) {
-	const attribute: { value: number; max: number } = foundry.utils.getProperty(
-		token.actor!.system,
-		token.getFlag(SYSTEM_ID, 'resource') as string
-	);
+	const attribute: { value: number; max: number } =
+		foundry.utils.getProperty(token.actor!.system, token.getFlag(SYSTEM_ID, 'resource') as string) ??
+		token.getBarAttribute('bar1');
 	const musicList = token.getFlag(SYSTEM_ID, 'musicList') as [string, number][] | undefined;
 	if (!musicList) return;
 

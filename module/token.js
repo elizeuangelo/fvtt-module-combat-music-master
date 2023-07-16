@@ -119,7 +119,8 @@ function resourceTracker(token) {
         updateCombatMusic(combatant.combat, music);
 }
 export function getTokenMusic(token) {
-    const attribute = foundry.utils.getProperty(token.actor.system, token.getFlag(SYSTEM_ID, 'resource'));
+    const attribute = foundry.utils.getProperty(token.actor.system, token.getFlag(SYSTEM_ID, 'resource')) ??
+        token.getBarAttribute('bar1');
     const musicList = token.getFlag(SYSTEM_ID, 'musicList');
     if (!musicList)
         return;

@@ -4,7 +4,7 @@ import { getTokenMusic } from './token.js';
 function playCombatMusic(combat: Combat) {
 	if (getCombatMusic().length === 0) return;
 	if (getSetting('pauseAmbience')) pauseAllMusic();
-	updateTurnMusic(combat);
+	//updateTurnMusic(combat);
 }
 
 let combatPaused: PlaylistSound[] = [];
@@ -159,9 +159,7 @@ export function updateTurnMusic(combat: Combat) {
 	let music = combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined;
 	let token: string = '';
 	if (!music) {
-		const turn = combat.started === false ? 0 : (combat.turn! + 1) % combat.turns.length;
-		const nextCombatant = combat.turns[turn];
-		const highestPriority = getHighestPriority(createPriorityList(nextCombatant?.tokenId!));
+		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId!));
 
 		const musicFound = highestPriority.find((p) => p.music === music);
 		if (!musicFound) {
@@ -180,7 +178,6 @@ window.CombatMusicMaster = {
 
 if (game.user!.isGM) {
 	Hooks.on('combatStart', playCombatMusic);
-	Hooks.on('combatTurn', updateTurnMusic);
-	Hooks.on('combatRound', updateTurnMusic);
+	Hooks.on('updateCombat', updateTurnMusic);
 	Hooks.on('deleteCombat', resumePlaylists);
 }

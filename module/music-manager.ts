@@ -155,7 +155,7 @@ export function getCombatMusic() {
 }
 
 export function updateTurnMusic(combat: Combat) {
-	if (getCombatMusic().length === 0) return;
+	if (!combat.started || getCombatMusic().length === 0) return;
 	let music = combat.getFlag(SYSTEM_ID, 'overrideMusic') as string | undefined;
 	let token: string = '';
 	if (!music) {

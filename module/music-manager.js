@@ -131,7 +131,7 @@ export function getCombatMusic() {
     return game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
 }
 export function updateTurnMusic(combat) {
-    if (getCombatMusic().length === 0)
+    if (!combat.started || getCombatMusic().length === 0)
         return;
     let music = combat.getFlag(SYSTEM_ID, 'overrideMusic');
     let token = '';

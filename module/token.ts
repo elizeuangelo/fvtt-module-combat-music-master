@@ -185,8 +185,10 @@ export function getTokenMusic(token: TokenDocument) {
 	const musicList = token.getFlag(SYSTEM_ID, 'musicList') as [string, number][] | undefined;
 	if (!musicList) return;
 
+	if (attribute.value > attribute.max) attribute.value = attribute.max;
+
 	// Default to 100 when max is 0 to support haunts and other resourceless hazards having music
-	const attrThreshold = attribute === undefined || attribute.max === 0 ? 100 : (100 * attribute.value) / attribute.max;
+	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
 	for (let i = musicList.length; i > 0; i--) {
 		const [music, threshold] = musicList[i - 1];
 		if (attrThreshold <= threshold) {

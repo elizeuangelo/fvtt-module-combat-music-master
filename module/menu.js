@@ -2,7 +2,7 @@ import { getSetting, setSetting, SYSTEM_ID } from './settings.js';
 
 export class PlaylistManager extends FormApplication {
 	static get defaultOptions() {
-		return mergeObject(super.defaultOptions, {
+		return foundry.utils.mergeObject(super.defaultOptions, {
 			id: 'combat-master-config',
 			title: 'Combat Master',
 			classes: ['sheet'],
@@ -71,7 +71,7 @@ export class PlaylistManager extends FormApplication {
 	}
 }
 
-Hooks.on('setup', () => {
+Hooks.once('setup', () => {
 	game.settings.registerMenu(SYSTEM_ID, 'combatMusicMenu', {
 		name: 'Combat Music Master',
 		label: 'Combat Playlists',

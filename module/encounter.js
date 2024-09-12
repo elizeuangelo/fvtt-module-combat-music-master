@@ -4,7 +4,7 @@ import { createOption } from './token.js';
 
 class CombatTrackerMusicManager extends FormApplication {
 	static get defaultOptions() {
-		return mergeObject(super.defaultOptions, {
+		return foundry.utils.mergeObject(super.defaultOptions, {
 			id: 'combat-master-tracker',
 			title: 'Combat Music Master',
 			classes: ['sheet'],
@@ -51,6 +51,7 @@ class CombatTrackerMusicManager extends FormApplication {
 		html[0].querySelector('select[name=playlist]').addEventListener('change', selectPlaylist);
 	}
 }
+
 const button = `
 <a class="combat-button combat-control" data-tooltip="Set Encounter Music" data-control="musicManager">
 <i class="fas fa-music"></i>

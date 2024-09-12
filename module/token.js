@@ -10,7 +10,7 @@ import {
 import { SYSTEM_ID, getSetting } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
-let section = await getTemplate('modules/combat-music-master/templates/music-section.html');
+let section;
 
 export function createOption(sound) {
 	return `<option value="${sound ? sound.id : ''}" ${sound?.selected ? 'selected' : ''}> ${sound ? sound.name : ''}</option>`;
@@ -164,5 +164,8 @@ export function getTokenMusic(token) {
 	}
 }
 
-Hooks.on('renderTokenConfig', addTab);
-if (game.user.isGM) Hooks.on('updateActor', resourceTracker);
+Hooks.once('setup', async () => {
+	section = await getTemplate('modules/combat-music-master/templates/music-section.html');
+	Hooks.on('renderTokenConfig', addTab);
+	if (game.user.isGM) Hooks.on('updateActor', resourceTracker);
+});

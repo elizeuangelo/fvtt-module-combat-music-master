@@ -153,8 +153,10 @@ window.CombatMusicMaster = {
 	setTokenConfig,
 };
 
-if (game.user.isGM) {
-	Hooks.on('combatStart', playCombatMusic);
-	Hooks.on('updateCombat', updateTurnMusic);
-	Hooks.on('deleteCombat', resumePlaylists);
-}
+Hooks.once('setup', () => {
+	if (game.user.isGM) {
+		Hooks.on('combatStart', playCombatMusic);
+		Hooks.on('updateCombat', updateTurnMusic);
+		Hooks.on('deleteCombat', resumePlaylists);
+	}
+});

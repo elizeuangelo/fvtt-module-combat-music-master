@@ -1,6 +1,6 @@
 import { getSetting, setSetting, SYSTEM_ID } from './settings.js';
 
-export class PlaylistManager extends FormApplication<FormApplicationOptions, any, any> {
+export class PlaylistManager extends FormApplication {
 	static get defaultOptions() {
 		return mergeObject(super.defaultOptions, {
 			id: 'combat-master-config',
@@ -12,13 +12,9 @@ export class PlaylistManager extends FormApplication<FormApplicationOptions, any
 		});
 	}
 
-	/**
-	 * Get all game settings related to the form, to display them
-	 * @param _options
-	 */
-	async getData(_options: any) {
+	async getData(_options) {
 		return {
-			playlists: game.playlists!.contents.map((playlist) => ({
+			playlists: game.playlists.contents.map((playlist) => ({
 				playlist,
 				active: playlist.getFlag(SYSTEM_ID, 'combat') || false,
 				default: getSetting('defaultPlaylist') === playlist.id,
@@ -26,20 +22,13 @@ export class PlaylistManager extends FormApplication<FormApplicationOptions, any
 		};
 	}
 
-	/**
-	 * Updates the settings to match the forms
-	 * @param _event
-	 * @param formData The form data to be saved
-	 */
-	protected async _updateObject(_event: Event, formData: { combat?: boolean[] | boolean }) {
-		const playlists = game.playlists!.contents;
+	async _updateObject(_event, formData) {
+		const playlists = game.playlists.contents;
 		if (formData.combat === undefined) return;
-
 		if (typeof formData.combat === 'boolean') formData.combat = [formData.combat];
 		if (playlists.length !== formData.combat.length) {
 			ui.notifications.error(`Playlists changed while configuration window was on.`);
 		}
-
 		for (let i = 0; i < playlists.length; i++) {
 			const playlist = playlists[i],
 				active = formData.combat[i];
@@ -49,7 +38,7 @@ export class PlaylistManager extends FormApplication<FormApplicationOptions, any
 		setSetting('defaultPlaylist', standard);
 	}
 
-	protected _onSearchFilter(event, query, rgx, html) {
+	_onSearchFilter(_event, query, rgx, html) {
 		for (let li of html.children) {
 			if (!query) {
 				li.classList.remove('hidden');
@@ -61,24 +50,22 @@ export class PlaylistManager extends FormApplication<FormApplicationOptions, any
 		}
 	}
 
-	protected _activateCoreListeners(html: JQuery<HTMLElement>): void {
+	_activateCoreListeners(html) {
 		super._activateCoreListeners(html);
-		function select(ev: PointerEvent) {
+		function select(ev) {
 			ev.preventDefault();
-			const target = ev.target as HTMLElement;
+			const target = ev.target;
 			const star = html[0].querySelector('label.star');
 			const toggle = target.classList.toggle('star');
 			if (star && star !== target) star.classList.remove('star');
-
 			const id = target.getAttribute('for');
-			if (toggle) (html[0].querySelector(`input#${id}`) as HTMLInputElement).checked = toggle;
+			if (toggle) html[0].querySelector(`input#${id}`).checked = toggle;
 		}
-		function removeStar(ev: PointerEvent) {
-			const target = ev.target as HTMLInputElement;
+		function removeStar(ev) {
+			const target = ev.target;
 			const label = html[0].querySelector(`label[for=${target.id}]`);
-			if (!target.checked) label!.classList.remove('star');
+			if (!target.checked) label.classList.remove('star');
 		}
-
 		html[0].querySelectorAll('label.playlist-name').forEach((label) => label.addEventListener('click', select));
 		html[0].querySelectorAll('input[name=combat]').forEach((label) => label.addEventListener('click', removeStar));
 	}
@@ -87,10 +74,10 @@ export class PlaylistManager extends FormApplication<FormApplicationOptions, any
 Hooks.on('setup', () => {
 	game.settings.registerMenu(SYSTEM_ID, 'combatMusicMenu', {
 		name: 'Combat Music Master',
-		label: 'Combat Playlists', // The text label used in the button
+		label: 'Combat Playlists',
 		hint: 'Select which ones are your combat playlists.',
-		icon: 'fas fa-music', // A Font Awesome icon used in the submenu button
-		type: PlaylistManager, // A FormApplication subclass which should be created
-		restricted: true, // Restrict this submenu to gamemaster only?
+		icon: 'fas fa-music',
+		type: PlaylistManager,
+		restricted: true,
 	});
 });

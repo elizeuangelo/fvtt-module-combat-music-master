@@ -26,20 +26,18 @@ const settings = {
 		default: true,
 		requiresReload: true,
 	},
-} as const;
+};
 
-export type Settings = typeof settings;
-
-export function getSetting<T extends keyof Settings>(name: T) {
-	return game.settings.get(SYSTEM_ID, name) as unknown as ReturnType<Settings[T]['type']>;
+export function getSetting(name) {
+	return game.settings.get(SYSTEM_ID, name);
 }
 
-export function setSetting<T extends keyof Settings>(name: T, value: ReturnType<Settings[T]['type']>) {
+export function setSetting(name, value) {
 	return game.settings.set(SYSTEM_ID, name, value);
 }
 
 Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {
-		game.settings.register(SYSTEM_ID, key, setting as unknown as any);
+		game.settings.register(SYSTEM_ID, key, setting);
 	}
 });

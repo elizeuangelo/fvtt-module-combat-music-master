@@ -1,4 +1,4 @@
-import { getSetting, setSetting, SYSTEM_ID } from './settings.js';
+import { getSetting, setSetting, MODULE_ID } from './settings.js';
 
 export class PlaylistManager extends FormApplication {
 	static get defaultOptions() {
@@ -16,7 +16,7 @@ export class PlaylistManager extends FormApplication {
 		return {
 			playlists: game.playlists.contents.map((playlist) => ({
 				playlist,
-				active: playlist.getFlag(SYSTEM_ID, 'combat') || false,
+				active: playlist.getFlag(MODULE_ID, 'combat') || false,
 				default: getSetting('defaultPlaylist') === playlist.id,
 			})),
 		};
@@ -32,7 +32,7 @@ export class PlaylistManager extends FormApplication {
 		for (let i = 0; i < playlists.length; i++) {
 			const playlist = playlists[i],
 				active = formData.combat[i];
-			if (playlist.getFlag(SYSTEM_ID, 'combat') != active) playlist.setFlag(SYSTEM_ID, 'combat', active);
+			if (playlist.getFlag(MODULE_ID, 'combat') != active) playlist.setFlag(MODULE_ID, 'combat', active);
 		}
 		const standard = this.element[0].querySelector('label.star')?.getAttribute('for') ?? '';
 		setSetting('defaultPlaylist', standard);
@@ -72,7 +72,7 @@ export class PlaylistManager extends FormApplication {
 }
 
 Hooks.once('setup', () => {
-	game.settings.registerMenu(SYSTEM_ID, 'combatMusicMenu', {
+	game.settings.registerMenu(MODULE_ID, 'combatMusicMenu', {
 		name: 'Combat Music Master',
 		label: 'Combat Playlists',
 		hint: 'Select which ones are your combat playlists.',

@@ -26,13 +26,7 @@
 		<label>Tracked Resource</label>
 		<div class="form-fields">
 			<select class="bar-attribute" name="tracked-resource">
-				{{#select trackedResource.attribute}} {{#each completeAttributes as |attrs label|}}
-				<optgroup label="{{ label }}">
-					{{#each attrs}}
-					<option value="{{this}}">{{this}}</option>
-					{{/each}}
-				</optgroup>
-				{{/each}} {{/select}}
+				{{selectOptions completeAttributes selected=trackedResource.attribute blank=(localize "None")}}
 			</select>
 		</div>
 	</div>

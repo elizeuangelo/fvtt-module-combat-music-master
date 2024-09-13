@@ -1,4 +1,4 @@
-export const SYSTEM_ID = 'combat-music-master';
+export const MODULE_ID = 'combat-music-master';
 
 const settings = {
 	defaultPlaylist: {
@@ -29,15 +29,15 @@ const settings = {
 };
 
 export function getSetting(name) {
-	return game.settings.get(SYSTEM_ID, name);
+	return game.settings.get(MODULE_ID, name);
 }
 
 export function setSetting(name, value) {
-	return game.settings.set(SYSTEM_ID, name, value);
+	return game.settings.set(MODULE_ID, name, value);
 }
 
 Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {
-		game.settings.register(SYSTEM_ID, key, setting);
+		game.settings.register(MODULE_ID, key, setting);
 	}
 });

@@ -1,5 +1,5 @@
 import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { SYSTEM_ID } from './settings.js';
+import { MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
 
 class CombatTrackerMusicManager extends FormApplication {
@@ -14,13 +14,13 @@ class CombatTrackerMusicManager extends FormApplication {
 	}
 
 	async getData(_options) {
-		const selected = parseMusic(game.combat.getFlag(SYSTEM_ID, 'overrideMusic'));
+		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
 		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
 		const track = playlist === selected ? undefined : selected;
 		const tracks = playlist ? playlist.sounds.contents : [];
 		return {
 			playlists: game.playlists.contents
-				.filter((p) => p.getFlag(SYSTEM_ID, 'combat'))
+				.filter((p) => p.getFlag(MODULE_ID, 'combat'))
 				.map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
 			tracks: tracks.map((t) => ({ id: t.id, name: t.name, selected: t === track })),
 		};
@@ -32,7 +32,7 @@ class CombatTrackerMusicManager extends FormApplication {
 		const sound = stringifyMusic(track ?? playlist);
 		game.combat
 			?.update({
-				[`flags.${SYSTEM_ID}.overrideMusic`]: sound,
+				[`flags.${MODULE_ID}.overrideMusic`]: sound,
 			})
 			.then(() => {
 				if (game.combat.started) updateTurnMusic(game.combat);

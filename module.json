@@ -2,7 +2,7 @@
     "id": "combat-music-master",
     "title": "Combat Music Master",
     "description": "Control your battle music! Automatically play songs amongst your combat playlists when combat starts.",
-    "version": "this-is-auto-replaced",
+    "version": "1.5.5",
     "authors": [
         {
             "name": "Mad Wizard",
@@ -17,7 +17,7 @@
     ],
     "compatibility": {
         "minimum": 12,
-        "verified": "12.311"
+        "verified": "12.331"
     },
     "url": "https://github.com/elizeuangelo/fvtt-module-combat-music-master/",
     "manifest": "https://github.com/elizeuangelo/fvtt-module-combat-music-master/releases/latest/download/module.json",

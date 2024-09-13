@@ -31,7 +31,7 @@ jobs:
 
             # Zip Files
             - name: Zip files
-              run: zip -r combat-music-master * -x ".github/*" "README.md" "*.ts" "LICENSE" "tsconfig.json" ".gitignore"
+              run: zip -r combat-music-master * -x ".github/*" "README.md" "*.ts" "LICENSE" "tsconfig.json" ".gitignore" "build.mjs"
 
             # Create a release for this specific version
             - name: Create Release

@@ -4,12 +4,26 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { exec } from 'child_process';
+import { createInterface } from 'readline';
 
 const env = parseEnv();
 const manifestFile = JSON.parse(fs.readFileSync('./module.json', 'utf-8'));
 
 const { id, title, version, manifest, compatibility, notes } = manifestFile;
 const newVersion = bumpVersion(version);
+
+const readline = createInterface({
+	input: process.stdin,
+	output: process.stdout,
+});
+
+async function awaitUserInput(msg) {
+	return new Promise((resolve) => {
+		readline.question(msg + ' ', (answer) => {
+			resolve(answer);
+		});
+	});
+}
 
 function parseEnv() {
 	const __filename = fileURLToPath(import.meta.url);
@@ -52,7 +66,7 @@ function bumpVersion(version) {
 
 function updateVersionInManifest() {
 	manifestFile.version = newVersion;
-	fs.writeFileSync('./module.json', JSON.stringify(manifestFile, null, 2));
+	fs.writeFileSync('./module.json', JSON.stringify(manifestFile, null, 4).replace(/\n/g, '\r\n'));
 }
 
 function updateFoundryRelease(dryRun = true) {
@@ -78,16 +92,24 @@ function updateFoundryRelease(dryRun = true) {
 	});
 }
 
-function execCommandAsPromise(command) {
+function execCommandAsPromise(command, ignoreWarnings = false) {
 	return new Promise((resolve, reject) => {
-		exec(command, (error, stdout, stderr) => {
+		exec(command, async (error, stdout, stderr) => {
 			if (error) {
 				reject(error);
 				return;
 			}
 			if (stderr) {
-				reject(stderr);
-				return;
+				if (!ignoreWarnings) {
+					console.error(`Some error happened when executing command: ${command}`);
+					console.error(stderr.trimEnd());
+					// Do you want to proceed?
+					const proceed = await awaitUserInput('Do you want to proceed? (y/n)');
+					if (proceed.toLowerCase() !== 'y') {
+						reject();
+						return;
+					}
+				}
 			}
 			resolve(stdout);
 		});
@@ -95,6 +117,13 @@ function execCommandAsPromise(command) {
 }
 
 console.log(`Building ${title} \x1b[31mv${version}\x1b[0m -> \x1b[32mv${newVersion}\x1b[0m`);
+
+// Do you want to proceed?
+const proceed = await awaitUserInput('Do you want to proceed? (y/n)');
+if (proceed.toLowerCase() !== 'y') {
+	console.log('Aborted');
+	process.exit(0);
+}
 
 const attemptResponse = await updateFoundryRelease(true);
 if (!attemptResponse.ok) {
@@ -113,9 +142,9 @@ try {
 	console.log('Committed new release');
 	await execCommandAsPromise(`git tag v${newVersion}`);
 	console.log('Created new tag');
-	await execCommandAsPromise('git push');
+	await execCommandAsPromise('git push', true);
 	console.log('Pushed changes');
-	await execCommandAsPromise('git push --tags');
+	await execCommandAsPromise('git push --tags', true);
 	console.log('Pushed tags');
 	const response = await updateFoundryRelease(false);
 	if (!response.ok) {
@@ -125,8 +154,9 @@ try {
 	}
 	console.log('Updated Foundry release');
 	console.log('✅ Build successful');
+	process.exit(0);
 } catch (error) {
-	console.error('❌ Build failed');
 	console.error(error);
+	console.error('❌ Build failed');
 	process.exit(1);
 }

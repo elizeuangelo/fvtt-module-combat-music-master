@@ -1,4 +1,4 @@
-import { getSetting, SYSTEM_ID } from './settings.js';
+import { getSetting, MODULE_ID } from './settings.js';
 import { getTokenMusic } from './token.js';
 
 function playCombatMusic() {
@@ -53,9 +53,9 @@ function createPriorityList(tokenId) {
 	for (const combatant of game.combat.combatants.contents) {
 		if (!combatant.token) continue;
 		const music = getTokenMusic(combatant.token),
-			priority = combatant.token.getFlag(SYSTEM_ID, 'priority') ?? 10,
+			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? 10,
 			token = combatant.token.id;
-		if (music && (combatant.token.getFlag(SYSTEM_ID, 'turnOnly') === false || token === tokenId))
+		if (music && (combatant.token.getFlag(MODULE_ID, 'turnOnly') === false || token === tokenId))
 			combatPlaylists.set({ token, music }, priority);
 	}
 	return combatPlaylists;
@@ -107,7 +107,7 @@ export function stringifyMusic(sound) {
 export function setCombatMusic(sound, combat = game.combat, token) {
 	if (combat) {
 		combat.update({
-			[`flags.${SYSTEM_ID}`]: {
+			[`flags.${MODULE_ID}`]: {
 				currentMusic: stringifyMusic(sound),
 				token,
 			},
@@ -118,7 +118,7 @@ export function setCombatMusic(sound, combat = game.combat, token) {
 export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
 	sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
 	token.update({
-		[`flags.${SYSTEM_ID}`]: {
+		[`flags.${MODULE_ID}`]: {
 			active,
 			resource,
 			priority,
@@ -129,12 +129,12 @@ export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly 
 }
 
 export function getCombatMusic() {
-	return game.playlists.contents.filter((p) => p.getFlag(SYSTEM_ID, 'combat'));
+	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
 export function updateTurnMusic(combat) {
 	if (!combat.started || getCombatMusic().length === 0) return;
-	let music = combat.getFlag(SYSTEM_ID, 'overrideMusic');
+	let music = combat.getFlag(MODULE_ID, 'overrideMusic');
 	let token = '';
 	if (!music) {
 		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));

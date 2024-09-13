@@ -7,7 +7,7 @@ import {
 	getHighestPriority,
 	pick,
 } from './music-manager.js';
-import { SYSTEM_ID, getSetting } from './settings.js';
+import { MODULE_ID, getSetting } from './settings.js';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 let section;
@@ -23,18 +23,18 @@ function fillOptions(html, options) {
 let menuTab = false;
 function addTab(tokenConfig, html, data) {
 	const token = tokenConfig.preview;
-	const musicList = token.getFlag(SYSTEM_ID, 'musicList') ?? [['', 100]];
-	const resource = token.getFlag(SYSTEM_ID, 'resource');
+	const musicList = token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]];
+	const resource = token.getFlag(MODULE_ID, 'resource');
 	data['trackedResource'] = resource
 		? token.getBarAttribute?.('tracked-resource', {
 				alternative: resource,
 		  })
 		: token.getBarAttribute('bar1');
-	data['completeAttributes'] = { 'Attribute Bars': data.barAttributes['Attribute Bars'] };
+	data['completeAttributes'] = data.barAttributes.filter((attr) => attr.group === 'Attribute Bars');
 	data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
-	data['musicPriority'] = token.getFlag(SYSTEM_ID, 'priority') ?? 10;
-	data['musicActive'] = token.getFlag(SYSTEM_ID, 'active') ?? false;
-	data['turnOnly'] = token.getFlag(SYSTEM_ID, 'turnOnly') ?? false;
+	data['musicPriority'] = token.getFlag(MODULE_ID, 'priority') ?? 10;
+	data['musicActive'] = token.getFlag(MODULE_ID, 'active') ?? false;
+	data['turnOnly'] = token.getFlag(MODULE_ID, 'turnOnly') ?? false;
 	html[0].querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
 
 	function selectPlaylist(ev) {
@@ -63,7 +63,7 @@ function addTab(tokenConfig, html, data) {
 				break;
 		}
 		tokenConfig._previewChanges({
-			[`flags.${SYSTEM_ID}`]: { musicList: tracks, priority, resource: resourceEl.value, turnOnly: turnOnlyEl.checked },
+			[`flags.${MODULE_ID}`]: { musicList: tracks, priority, resource: resourceEl.value, turnOnly: turnOnlyEl.checked },
 		});
 		menuTab = true;
 		tokenConfig.render();
@@ -134,20 +134,21 @@ function addTab(tokenConfig, html, data) {
 
 function resourceTracker(actor) {
 	if (!game.combat?.started) return;
-	const token = game.combat?.combatant?.token;
-	if (!token || token.actor !== actor) return;
+	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
+	const token = actor.token;
+	if (!musicToken || !token || musicToken !== token.id) return;
 	const combatant = token.combatant;
-	if (combatant.combat.getFlag(SYSTEM_ID, 'token') !== token.id) return;
+	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
 	const music = getTokenMusic(token);
 	if (music) updateCombatMusic(combatant.combat, music);
 }
 
 export function getTokenMusic(token) {
-	const active = token.getFlag(SYSTEM_ID, 'active');
+	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
 	const attribute =
-		foundry.utils.getProperty(token.actor.system, token.getFlag(SYSTEM_ID, 'resource')) ?? token.getBarAttribute('bar1');
-	const musicList = token.getFlag(SYSTEM_ID, 'musicList');
+		foundry.utils.getProperty(token.actor.system, token.getFlag(MODULE_ID, 'resource')) ?? token.getBarAttribute('bar1');
+	const musicList = token.getFlag(MODULE_ID, 'musicList');
 	if (!musicList) return;
 	if (attribute.value > attribute.max) attribute.value = attribute.max;
 	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
@@ -167,5 +168,8 @@ export function getTokenMusic(token) {
 Hooks.once('setup', async () => {
 	section = await getTemplate('modules/combat-music-master/templates/music-section.html');
 	Hooks.on('renderTokenConfig', addTab);
-	if (game.user.isGM) Hooks.on('updateActor', resourceTracker);
+	if (game.user.isGM) {
+		Hooks.on('updateActor', resourceTracker);
+		Hooks.on('updateToken', (token) => resourceTracker(token.actor));
+	}
 });

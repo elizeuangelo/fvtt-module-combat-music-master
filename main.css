@@ -1,77 +1,75 @@
 .cmm-playlists {
-    background: rgba(0, 0, 0, 0.05);
-    border: 2px inset #6666;
-    border-radius: 0.5em;
-    padding: 0.5em;
-    list-style-type: disc;
-    height: 300px;
-    overflow-y: scroll;
-    padding: 0.5em;
-    list-style-type: none;
+  background: rgb(0 0 0 / 5%);
+  border: 2px inset #6666;
+  border-radius: 0.5em;
+  height: 300px;
+  overflow-y: scroll;
+  padding: 0.5em;
+  list-style-type: none;
 }
 
 .cmm-playlists li {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .cmm-playlists li.hidden {
-    display: none;
+  display: none;
 }
 
 .cmm-playlists li label {
-    cursor: pointer;
+  cursor: pointer;
 }
 
-.cmm-playlists li label:hover:after {
-    content: "\f005";
-    font-family: "Font Awesome 6 Pro";
-    font-weight: 400;
-    margin-left: 5px;
+.cmm-playlists li label:hover::after {
+  content: '\f005';
+  font-family: 'Font Awesome 6 Pro';
+  font-weight: 400;
+  margin-left: 5px;
 }
 
-.cmm-playlists li label.star:after {
-    content: "\f005";
-    font-family: "Font Awesome 6 Pro";
-    font-weight: 900;
-    margin-left: 5px;
-    color: darkorange;
+.cmm-playlists li label.star::after {
+  content: '\f005';
+  font-family: 'Font Awesome 6 Pro';
+  font-weight: 900;
+  margin-left: 5px;
+  color: darkorange;
 }
 
 .cmm-playlists li:not(:first-child) {
-    border-top: 1px dashed #6666;
+  border-top: 1px dashed #6666;
 }
 
 .combat-sidebar .combat-tracker-header div.encounter-controls .encounter-title {
-    margin-left: 0;
+  margin-left: 0;
 }
 
 .track-selections .track-selection {
-    display: flex;
-    flex-wrap: nowrap;
-    text-align: left;
-    margin: 0 0 0.5rem;
-    padding: 0;
-    border: none;
+  display: flex;
+  flex-wrap: nowrap;
+  text-align: left;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: none;
 }
 
 .track-selections header.track-selection {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .track-selections .track-selection > * {
-    margin-right: 4px;
-    flex: 1;
+  margin-right: 4px;
+  flex: 1;
 }
 
 .track-selections .track-selection select {
-    width: 100%;
+  width: 100%;
 }
 
 .track-selections .track-selection-controls {
-    flex: 0 0 32px;
-    margin-right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+  flex: 0 0 32px;
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }

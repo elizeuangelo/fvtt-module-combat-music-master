@@ -3,53 +3,49 @@ import { MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
 
 class CombatTrackerMusicManager extends FormApplication {
-	static get defaultOptions() {
-		return foundry.utils.mergeObject(super.defaultOptions, {
-			id: 'combat-master-tracker',
-			title: 'Combat Music Master',
-			classes: ['sheet'],
-			template: 'modules/combat-music-master/templates/tracker.html',
-			width: 400,
-		});
-	}
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: 'combat-master-tracker',
+      title: 'Combat Music Master',
+      classes: ['sheet'],
+      template: 'modules/combat-music-master/templates/tracker.html',
+      width: 400
+    });
+  }
 
-	async getData(_options) {
-		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
-		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
-		const track = playlist === selected ? undefined : selected;
-		const tracks = playlist ? playlist.sounds.contents : [];
-		return {
-			playlists: game.playlists.contents
-				.filter((p) => p.getFlag(MODULE_ID, 'combat'))
-				.map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
-			tracks: tracks.map((t) => ({ id: t.id, name: t.name, selected: t === track })),
-		};
-	}
+  async getData(_options) {
+    const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
+    const playlist = 'error' in selected ? undefined : (selected?.parent ?? selected);
+    const track = playlist === selected ? undefined : selected;
+    const tracks = playlist ? playlist.sounds.contents : [];
+    return {
+      playlists: game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat')).map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
+      tracks: tracks.map((t) => ({ id: t.id, name: t.name, selected: t === track }))
+    };
+  }
 
-	async _updateObject(_event, formData) {
-		const playlist = game.playlists.get(formData.playlist);
-		const track = playlist?.sounds.get(formData.track);
-		const sound = stringifyMusic(track ?? playlist);
-		game.combat
-			?.update({
-				[`flags.${MODULE_ID}.overrideMusic`]: sound,
-			})
-			.then(() => {
-				if (game.combat.started) updateTurnMusic(game.combat);
-			});
-	}
+  async _updateObject(_event, formData) {
+    const playlist = game.playlists.get(formData.playlist);
+    const track = playlist?.sounds.get(formData.track);
+    const sound = stringifyMusic(track ?? playlist);
+    game.combat
+      ?.update({
+        [`flags.${MODULE_ID}.overrideMusic`]: sound
+      })
+      .then(() => {
+        if (game.combat.started) updateTurnMusic(game.combat);
+      });
+  }
 
-	_activateCoreListeners(html) {
-		super._activateCoreListeners(html);
-		function selectPlaylist(ev) {
-			const playlist = game.playlists.get(ev.target.value);
-			const tracks = playlist?.sounds.contents ?? [];
-			html[0].querySelector('select[name=track]').innerHTML = [undefined, ...tracks]
-				.map((track) => createOption(track))
-				.join('');
-		}
-		html[0].querySelector('select[name=playlist]').addEventListener('change', selectPlaylist);
-	}
+  _activateCoreListeners(html) {
+    super._activateCoreListeners(html);
+    function selectPlaylist(ev) {
+      const playlist = game.playlists.get(ev.target.value);
+      const tracks = playlist?.sounds.contents ?? [];
+      html[0].querySelector('select[name=track]').innerHTML = [undefined, ...tracks].map((track) => createOption(track)).join('');
+    }
+    html[0].querySelector('select[name=playlist]').addEventListener('change', selectPlaylist);
+  }
 }
 
 const button = `
@@ -58,15 +54,15 @@ const button = `
 </a>`;
 
 function clickButton() {
-	new CombatTrackerMusicManager().render(true);
+  new CombatTrackerMusicManager().render(true);
 }
 
 function addButton(_encounter, html) {
-	const title = html[0].querySelector('.encounter-title.noborder');
-	const btn = $(button)[0];
-	if (!game.combat) btn.setAttribute('disabled', '');
-	btn.addEventListener('click', clickButton);
-	title.insertAdjacentElement('beforebegin', btn);
+  const title = html[0].querySelector('.encounter-title.noborder');
+  const btn = $(button)[0];
+  if (!game.combat) btn.setAttribute('disabled', '');
+  btn.addEventListener('click', clickButton);
+  title.insertAdjacentElement('beforebegin', btn);
 }
 
 Hooks.on('renderCombatTracker', addButton);

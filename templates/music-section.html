@@ -32,13 +32,13 @@
 	</div>
 
 	{{#unless isDefault}}
-	<div class="form-group slim">
-		<div class="form-fields">
-			<input type="number" class="tracked-resource-value" value="{{trackedResource.value}}" disabled />
-			<span class="sep">/</span>
-			<input type="number" class="tracked-resource-max" value="{{trackedResource.max}}" disabled />
+		<div class="form-group slim">
+			<div class="form-fields">
+				<input type="number" class="tracked-resource-value" value="{{trackedResource.value}}" disabled />
+				<span class="sep">/</span>
+				<input type="number" class="tracked-resource-max" value="{{trackedResource.max}}" disabled />
+			</div>
 		</div>
-	</div>
 	{{/unless}}
 
 	<hr />
@@ -56,31 +56,31 @@
 		</header>
 
 		{{#each trackSelection}}
-		<fieldset class="track-selection" data-index="{{@index}}">
-			<div>
-				<select name="playlist">
-					<option value=""></option>
-				</select>
-			</div>
+			<fieldset class="track-selection" data-index="{{@index}}">
+				<div>
+					<select name="playlist">
+						<option value=""></option>
+					</select>
+				</div>
 
-			<div>
-				<select name="track">
-					<option value=""></option>
-				</select>
-			</div>
+				<div>
+					<select name="track">
+						<option value=""></option>
+					</select>
+				</div>
 
-			<div>
-				<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
+				<div>
+					<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
 				this.disabled}}disabled{{/if}}>
-			</div>
-			<div class="track-selection-controls">
-				{{#unless this.disabled}}
-				<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
-					<i class="fa-solid fa-times"></i>
-				</a>
-				{{/unless}}
-			</div>
-		</fieldset>
+				</div>
+				<div class="track-selection-controls">
+					{{#unless this.disabled}}
+						<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
+							<i class="fa-solid fa-times"></i>
+						</a>
+					{{/unless}}
+				</div>
+			</fieldset>
 		{{/each}}
 	</div>
 </div>

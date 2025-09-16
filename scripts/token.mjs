@@ -1,5 +1,6 @@
-import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic, getCombatMusic, getHighestPriority, pick } from './music-manager.js';
-import { MODULE_ID, getSetting } from './settings.js';
+// TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { parseMusic, updateCombatMusic, setTokenConfig, stringifyMusic, getCombatMusic, getHighestPriority, pick } from './music-manager.mjs';
+import { MODULE_ID, getSetting } from './settings.mjs';
 
 const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
 let section;
@@ -152,7 +153,7 @@ export function getTokenMusic(token) {
 }
 
 Hooks.once('setup', async () => {
-  section = await getTemplate('modules/combat-music-master/templates/music-section.html');
+  section = await getTemplate('modules/combat-music-master/templates/music-section.hbs');
   Hooks.on('renderTokenConfig', addTab);
   if (game.user.isGM) {
     Hooks.on('updateActor', resourceTracker);

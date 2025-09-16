@@ -1,5 +1,6 @@
-import { getSetting, MODULE_ID } from './settings.js';
-import { getTokenMusic } from './token.js';
+// TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { getSetting, MODULE_ID } from './settings.mjs';
+import { getTokenMusic } from './token.mjs';
 
 function playCombatMusic() {
   if (getCombatMusic().length === 0) return;

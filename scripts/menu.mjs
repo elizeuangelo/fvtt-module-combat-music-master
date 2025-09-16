@@ -1,4 +1,5 @@
-import { getSetting, setSetting, MODULE_ID } from './settings.js';
+// TODO: Convert to ApplicationV2 and HandlebarsApplicationMixin
+import { getSetting, setSetting, MODULE_ID } from './settings.mjs';
 
 export class PlaylistManager extends FormApplication {
   static get defaultOptions() {
@@ -6,7 +7,7 @@ export class PlaylistManager extends FormApplication {
       id: 'combat-master-config',
       title: 'Combat Master',
       classes: ['sheet'],
-      template: 'modules/combat-music-master/templates/config.html',
+      template: 'modules/combat-music-master/templates/config.hbs',
       width: 400,
       filters: [{ inputSelector: 'input[name="search"]', contentSelector: '.cmm-playlists' }]
     });

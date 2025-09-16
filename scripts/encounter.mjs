@@ -1,6 +1,7 @@
-import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { MODULE_ID } from './settings.js';
-import { createOption } from './token.js';
+// TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.mjs';
+import { MODULE_ID } from './settings.mjs';
+import { createOption } from './token.mjs';
 
 class CombatTrackerMusicManager extends FormApplication {
   static get defaultOptions() {
@@ -8,7 +9,7 @@ class CombatTrackerMusicManager extends FormApplication {
       id: 'combat-master-tracker',
       title: 'Combat Music Master',
       classes: ['sheet'],
-      template: 'modules/combat-music-master/templates/tracker.html',
+      template: 'modules/combat-music-master/templates/tracker.hbs',
       width: 400
     });
   }

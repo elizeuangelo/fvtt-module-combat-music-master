@@ -1,4 +1,4 @@
-<div class="tab" data-group="main" data-tab="music-manager">
+<div class="flexcol" autocomplete="off">
 	<div class="form-group">
 		<label>Active</label>
 		<input type="checkbox" name="music-active" {{#if musicActive}}checked{{/if}}>
@@ -8,7 +8,7 @@
 		<label>Turn Only</label>
 		<input type="checkbox" name="turn-only" {{#if turnOnly}}checked{{/if}}>
 		<p class="hint">
-			Wether the track should only play on the token's turn.
+			Whether the track should only play on the token's turn.
 			<br />
 			Priority is still respected -> will compete against other tracks with same priority.
 		</p>
@@ -23,31 +23,22 @@
 	</div>
 
 	<div class="form-group">
-		<label>Tracked Resource</label>
+		<label>Current HP</label>
 		<div class="form-fields">
-			<select class="bar-attribute" name="tracked-resource">
-				{{selectOptions completeAttributes selected=trackedResource.attribute blank=(localize "None")}}
-			</select>
+			<input type="number" class="tracked-resource-value" value="{{trackedResource.value}}" disabled />
+			<span class="sep">/</span>
+			<input type="number" class="tracked-resource-max" value="{{trackedResource.max}}" disabled />
 		</div>
+		<p class="notes">Music will change based on HP percentage thresholds below.</p>
 	</div>
-
-	{{#unless isDefault}}
-		<div class="form-group slim">
-			<div class="form-fields">
-				<input type="number" class="tracked-resource-value" value="{{trackedResource.value}}" disabled />
-				<span class="sep">/</span>
-				<input type="number" class="tracked-resource-max" value="{{trackedResource.max}}" disabled />
-			</div>
-		</div>
-	{{/unless}}
 
 	<hr />
 
-	<div class="track-selections" data-group="vision">
+	<div class="track-selections">
 		<header class="track-selection">
 			<div class="track-selection-playlist">Playlist</div>
 			<div class="track-selection-track">Track</div>
-			<div class="track-selection-range">Resource Threshold (%)</div>
+			<div class="track-selection-range">HP Threshold (%)</div>
 			<div class="track-selection-controls">
 				<a class="action-button" data-action="addTrack" data-tooltip="Add Track">
 					<i class="fa-solid fa-plus"></i>
@@ -58,20 +49,20 @@
 		{{#each trackSelection}}
 			<fieldset class="track-selection" data-index="{{@index}}">
 				<div>
-					<select name="playlist">
+					<select name="playlist" data-index="{{@index}}">
 						<option value=""></option>
 					</select>
 				</div>
 
 				<div>
-					<select name="track">
+					<select name="track" data-index="{{@index}}">
 						<option value=""></option>
 					</select>
 				</div>
 
 				<div>
-					<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
-				this.disabled}}disabled{{/if}}>
+					<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any"
+						{{#if this.disabled}}disabled{{/if}}>
 				</div>
 				<div class="track-selection-controls">
 					{{#unless this.disabled}}
@@ -83,4 +74,15 @@
 			</fieldset>
 		{{/each}}
 	</div>
+
+	<footer class="sheet-footer">
+		<button type="submit">
+			<i class="fas fa-save"></i>
+			{{localize "Save Changes"}}
+		</button>
+		<button type="button" data-action="reset">
+			<i class="fas fa-undo"></i>
+			{{localize "Reset"}}
+		</button>
+	</footer>
 </div>

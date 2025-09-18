@@ -1,7 +1,7 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
 import { getSetting, MODULE_ID } from './settings.mjs';
 import { getTokenMusic } from './token.mjs';
-
+import { getActorSheetHeaderButtons, getActorSheetHeaderControls } from './token.mjs';
 function playCombatMusic() {
   if (getCombatMusic().length === 0) return;
   if (getSetting('pauseAmbience')) pauseAllMusic();
@@ -115,12 +115,11 @@ export function setCombatMusic(sound, combat = game.combat, token) {
   }
 }
 
-export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
+export function setTokenConfig(token, sounds, priority = 10, turnOnly = false, active = false) {
   sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
   token.update({
     [`flags.${MODULE_ID}`]: {
       active,
-      resource,
       priority,
       musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),
       turnOnly
@@ -160,3 +159,5 @@ Hooks.once('setup', () => {
     Hooks.on('deleteCombat', resumePlaylists);
   }
 });
+Hooks.on('getHeaderControlsBaseActorSheet', getActorSheetHeaderControls);
+Hooks.on('getActorSheetHeaderButtons', getActorSheetHeaderButtons);

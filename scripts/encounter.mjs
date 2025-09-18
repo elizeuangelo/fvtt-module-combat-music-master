@@ -1,4 +1,3 @@
-// TODO: Remove ALL jQuery from hooks as they now use HTMLElements
 import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.mjs';
 import { MODULE_ID } from './settings.mjs';
 import { createOption } from './token.mjs';
@@ -59,8 +58,10 @@ function clickButton() {
 }
 
 function addButton(_encounter, html) {
-  const title = html[0].querySelector('.encounter-title.noborder');
-  const btn = $(button)[0];
+  const title = html.querySelector('.encounter-title');
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = button;
+  const btn = tempDiv.firstElementChild;
   if (!game.combat) btn.setAttribute('disabled', '');
   btn.addEventListener('click', clickButton);
   title.insertAdjacentElement('beforebegin', btn);

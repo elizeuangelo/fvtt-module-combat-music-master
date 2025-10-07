@@ -2,33 +2,116 @@ import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js'
 import { MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
 
-class CombatTrackerMusicManager extends FormApplication {
-	static get defaultOptions() {
-		return foundry.utils.mergeObject(super.defaultOptions, {
-			id: 'combat-master-tracker',
-			title: 'Combat Music Master',
-			classes: ['sheet'],
-			template: 'modules/combat-music-master/templates/tracker.html',
-			width: 400,
-		});
-	}
+class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsApplicationMixin(
+	foundry.applications.api.ApplicationV2
+) {
+	static DEFAULT_OPTIONS = {
+		id: 'combat-master-tracker',
+		tag: 'form',
+		window: {
+			contentClasses: ['standard-form'],
+			icon: 'fa-solid fa-music',
+			title: 'Set Encounter Music',
+		},
+		position: { width: 400 },
+		form: {
+			closeOnSubmit: true,
+			handler: CombatTrackerMusicManager.#saveSettings,
+		},
+		actions: {
+			previewTheme: CombatTrackerMusicManager.#onPreviewTheme,
+		},
+	};
 
-	async getData(_options) {
+	static PARTS = {
+		body: { template: 'modules/combat-music-master/templates/tracker.hbs', scrollable: [''] },
+		footer: { template: 'templates/generic/form-footer.hbs' },
+	};
+
+	/* -------------------------------------------- */
+
+	static #schema = new foundry.data.fields.SchemaField({
+		playlist: new foundry.data.fields.StringField({
+			name: 'playlist',
+			label: 'Playlist',
+			hint: 'Choose a playlist.',
+			initial: '',
+			blank: true,
+		}),
+		track: new foundry.data.fields.StringField({
+			name: 'track',
+			label: 'Track',
+			hint: 'Choose a track.',
+			initial: '',
+			blank: true,
+		}),
+	});
+
+	async _prepareContext() {
+		const playlists = game.playlists.contents
+			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
+			.map((p) => ({ value: p.id, label: p.name }));
 		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
 		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
-		const track = playlist === selected ? undefined : selected;
-		const tracks = playlist ? playlist.sounds.contents : [];
+		const track = playlist === selected ? undefined : 'error' in selected ? undefined : selected;
+		const tracks = playlist ? playlist.sounds.contents.map((s) => ({ value: s.id, label: s.name })) : [];
 		return {
-			playlists: game.playlists.contents
-				.filter((p) => p.getFlag(MODULE_ID, 'combat'))
-				.map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
-			tracks: tracks.map((t) => ({ id: t.id, name: t.name, selected: t === track })),
+			rootId: this.id,
+			playlists,
+			selectedPlaylist: playlist?.id,
+			selectedTrack: track?.id,
+			fields: CombatTrackerMusicManager.#schema.fields,
+			tracks,
+			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'COMBAT.SettingsSave' }],
 		};
 	}
 
-	async _updateObject(_event, formData) {
-		const playlist = game.playlists.get(formData.playlist);
-		const track = playlist?.sounds.get(formData.track);
+	/* -------------------------------------------- */
+	/*  Event Listeners                             */
+	/* -------------------------------------------- */
+
+	async _onRender(context, options) {
+		await super._onRender(context, options);
+		this.element.querySelector('select[name=playlist]').addEventListener('change', this.#selectPlaylist.bind(this));
+	}
+
+	#selectPlaylist(ev) {
+		const playlist = game.playlists.get(ev.target.value);
+		const tracks = playlist?.sounds.contents ?? [];
+		this.element.querySelector('select[name=track]').innerHTML = [undefined, ...tracks]
+			.map((track) => createOption(track))
+			.join('');
+	}
+
+	/* -------------------------------------------- */
+	/*  Event Handlers                              */
+	/* -------------------------------------------- */
+
+	#audioPreviewState = 0;
+
+	/**
+	 * Handle previewing a sound file for a Combat Tracker setting
+	 * @this CombatTrackerMusicManager
+	 */
+	static async #onPreviewTheme(_event, target) {
+		const themeId = target.previousElementSibling.value;
+		const theme = CONFIG.Combat.sounds[themeId];
+		if (!theme) return;
+		const announcements = CONST.COMBAT_ANNOUNCEMENTS;
+		const announcement = announcements[this.#audioPreviewState++ % announcements.length];
+		const sounds = theme[announcement];
+		if (!sounds) return;
+		const src = sounds[Math.floor(Math.random() * sounds.length)];
+		game.audio.play(src, { context: game.audio.interface });
+	}
+
+	/**
+	 * Save all settings.
+	 */
+	static async #saveSettings(_event, _form, submitData) {
+		const settings = foundry.utils.expandObject(submitData.object);
+		const playlist = game.playlists.get(settings.playlist);
+		const track = playlist?.sounds.get(settings.track);
 		const sound = stringifyMusic(track ?? playlist);
 		game.combat
 			?.update({
@@ -38,35 +121,16 @@ class CombatTrackerMusicManager extends FormApplication {
 				if (game.combat.started) updateTurnMusic(game.combat);
 			});
 	}
-
-	_activateCoreListeners(html) {
-		super._activateCoreListeners(html);
-		function selectPlaylist(ev) {
-			const playlist = game.playlists.get(ev.target.value);
-			const tracks = playlist?.sounds.contents ?? [];
-			html[0].querySelector('select[name=track]').innerHTML = [undefined, ...tracks]
-				.map((track) => createOption(track))
-				.join('');
-		}
-		html[0].querySelector('select[name=playlist]').addEventListener('change', selectPlaylist);
-	}
 }
 
-const button = `
-<a class="combat-button combat-control" data-tooltip="Set Encounter Music" data-control="musicManager">
-<i class="fas fa-music"></i>
-</a>`;
-
-function clickButton() {
-	new CombatTrackerMusicManager().render(true);
+Hooks.on('getCombatContextOptions', addButtonToContextMenu);
+function addButtonToContextMenu(_combatTracker, options) {
+	options.push({
+		name: 'Set Encounter Music',
+		icon: '<i class="fas fa-music"></i>',
+		condition: () => game.user.isGM,
+		callback: () => {
+			new CombatTrackerMusicManager().render(true);
+		},
+	});
 }
-
-function addButton(_encounter, html) {
-	const title = html[0].querySelector('.encounter-title.noborder');
-	const btn = $(button)[0];
-	if (!game.combat) btn.setAttribute('disabled', '');
-	btn.addEventListener('click', clickButton);
-	title.insertAdjacentElement('beforebegin', btn);
-}
-
-Hooks.on('renderCombatTracker', addButton);

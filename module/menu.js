@@ -6,7 +6,7 @@ export class PlaylistManager extends FormApplication {
 			id: 'combat-master-config',
 			title: 'Combat Master',
 			classes: ['sheet'],
-			template: 'modules/combat-music-master/templates/config.html',
+			template: 'modules/combat-music-master/templates/config.hbs',
 			width: 400,
 			filters: [{ inputSelector: 'input[name="search"]', contentSelector: '.cmm-playlists' }],
 		});
@@ -45,7 +45,7 @@ export class PlaylistManager extends FormApplication {
 				continue;
 			}
 			const name = (li.querySelector('.playlist-name')?.textContent || '').trim();
-			const match = rgx.test(SearchFilter.cleanQuery(name));
+			const match = rgx.test(foundry.applications.ux.SearchFilter.cleanQuery(name));
 			li.classList.toggle('hidden', !match);
 		}
 	}

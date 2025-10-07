@@ -13,7 +13,9 @@ const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"><
 let section;
 
 export function createOption(sound) {
-	return `<option value="${sound ? sound.id : ''}" ${sound?.selected ? 'selected' : ''}> ${sound ? sound.name : ''}</option>`;
+	return `<option value="${sound ? sound.id : ''}" ${sound?.selected ? 'selected' : ''}> ${
+		sound ? sound.name : ''
+	}</option>`;
 }
 
 function fillOptions(html, options) {
@@ -22,7 +24,7 @@ function fillOptions(html, options) {
 
 let menuTab = false;
 function addTab(tokenConfig, html, data) {
-	const token = tokenConfig.preview;
+	const token = tokenConfig._preview;
 	const musicList = token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]];
 	const resource = token.getFlag(MODULE_ID, 'resource');
 	data['trackedResource'] = resource
@@ -35,7 +37,7 @@ function addTab(tokenConfig, html, data) {
 	data['musicPriority'] = token.getFlag(MODULE_ID, 'priority') ?? 10;
 	data['musicActive'] = token.getFlag(MODULE_ID, 'active') ?? false;
 	data['turnOnly'] = token.getFlag(MODULE_ID, 'turnOnly') ?? false;
-	html[0].querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
+	html.querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
 
 	function selectPlaylist(ev) {
 		const playlist = game.playlists.get(ev.target.value);
@@ -63,7 +65,12 @@ function addTab(tokenConfig, html, data) {
 				break;
 		}
 		tokenConfig._previewChanges({
-			[`flags.${MODULE_ID}`]: { musicList: tracks, priority, resource: resourceEl.value, turnOnly: turnOnlyEl.checked },
+			[`flags.${MODULE_ID}`]: {
+				musicList: tracks,
+				priority,
+				resource: resourceEl.value,
+				turnOnly: turnOnlyEl.checked,
+			},
 		});
 		menuTab = true;
 		tokenConfig.render();
@@ -101,7 +108,7 @@ function addTab(tokenConfig, html, data) {
 	const turnOnlyEl = sectionEl.querySelector('input[name=turn-only]');
 	const resourceEl = sectionEl.querySelector('select[name=tracked-resource');
 	const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection');
-	const formEl = html[0].nodeName === 'FORM' ? html[0] : html[0].querySelector('form');
+	const formEl = html.nodeName === 'FORM' ? html : html.querySelector('form');
 	const combatPlaylists = getCombatMusic();
 	for (let i = 0; i < musicListEls.length; i++) {
 		const el = musicListEls[i];
@@ -118,11 +125,11 @@ function addTab(tokenConfig, html, data) {
 		fillOptions(trackEl, [undefined, ...tracks.map((p) => ({ id: p.id, name: p.name, selected: p === track }))]);
 		playlistEl.addEventListener('change', selectPlaylist);
 	}
-	const footer = html[0].querySelector('footer.sheet-footer');
+	const footer = html.querySelector('footer.sheet-footer');
 	footer.insertAdjacentElement('beforebegin', sectionEl);
-	if (html[0].classList.contains('app')) {
+	if (html.classList.contains('app')) {
 		const width = tokenConfig.options.width + 80;
-		html[0].style.width = `${width}px`;
+		html.style.width = `${width}px`;
 		tokenConfig.position.width = width;
 	}
 	if (menuTab) tokenConfig.activateTab('music-manager');
@@ -147,7 +154,8 @@ export function getTokenMusic(token) {
 	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
 	const attribute =
-		foundry.utils.getProperty(token.actor.system, token.getFlag(MODULE_ID, 'resource')) ?? token.getBarAttribute('bar1');
+		foundry.utils.getProperty(token.actor.system, token.getFlag(MODULE_ID, 'resource')) ??
+		token.getBarAttribute('bar1');
 	const musicList = token.getFlag(MODULE_ID, 'musicList');
 	if (!musicList) return;
 	if (attribute.value > attribute.max) attribute.value = attribute.max;
@@ -157,7 +165,9 @@ export function getTokenMusic(token) {
 		if (attrThreshold <= threshold) {
 			if (music === '') {
 				const base = getSetting('defaultPlaylist');
-				const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
+				const combatPlaylists = new Map(
+					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)])
+				);
 				return pick(getHighestPriority(combatPlaylists)).music;
 			}
 			return music;
@@ -166,7 +176,9 @@ export function getTokenMusic(token) {
 }
 
 Hooks.once('setup', async () => {
-	section = await getTemplate('modules/combat-music-master/templates/music-section.html');
+	section = await foundry.applications.handlebars.getTemplate(
+		'modules/combat-music-master/templates/music-section.hbs'
+	);
 	Hooks.on('renderTokenConfig', addTab);
 	if (game.user.isGM) {
 		Hooks.on('updateActor', resourceTracker);

@@ -1,4 +1,4 @@
-// Usage: node build.js
+// Usage: node build.mjs
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -59,8 +59,18 @@ function parseEnv() {
 }
 
 function bumpVersion(version) {
+	const mode = process.argv.includes('--major') ? 'major' : process.argv.includes('--minor') ? 'minor' : 'patch';
 	const arr = version.split('.');
-	arr[arr.length - 1] = parseInt(arr[arr.length - 1]) + 1;
+	if (mode === 'major') {
+		arr[0] = parseInt(arr[0]) + 1;
+		arr[1] = 0;
+		arr[2] = 0;
+	} else if (mode === 'minor') {
+		arr[1] = parseInt(arr[1]) + 1;
+		arr[2] = 0;
+	} else {
+		arr[2] = parseInt(arr[2]) + 1;
+	}
 	return arr.join('.');
 }
 
@@ -92,25 +102,17 @@ function updateFoundryRelease(dryRun = true) {
 	});
 }
 
-function execCommandAsPromise(command, ignoreWarnings = false) {
+function execCommandAsPromise(command) {
 	return new Promise((resolve, reject) => {
-		exec(command, async (error, stdout, stderr) => {
+		exec(command, (error, stdout, stderr) => {
 			if (error) {
 				reject(error);
 				return;
 			}
 			if (stderr) {
-				if (!ignoreWarnings) {
-					console.error(`Some error happened when executing command: ${command}`);
-					console.error(stderr.trimEnd());
-					// Do you want to proceed?
-					const proceed = await awaitUserInput('Do you want to proceed? (y/n)');
-					if (proceed.toLowerCase() !== 'y') {
-						reject();
-						return;
-					}
-				}
+				console.log(stderr.trimEnd());
 			}
+			if (stdout) console.log(stdout.trimEnd());
 			resolve(stdout);
 		});
 	});
@@ -142,9 +144,9 @@ try {
 	console.log('Committed new release');
 	await execCommandAsPromise(`git tag v${newVersion}`);
 	console.log('Created new tag');
-	await execCommandAsPromise('git push', true);
+	await execCommandAsPromise('git push');
 	console.log('Pushed changes');
-	await execCommandAsPromise('git push --tags', true);
+	await execCommandAsPromise('git push --tags');
 	console.log('Pushed tags');
 	const response = await updateFoundryRelease(false);
 	if (!response.ok) {

@@ -18,9 +18,6 @@ class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsAppli
 			closeOnSubmit: true,
 			handler: CombatTrackerMusicManager.#saveSettings,
 		},
-		actions: {
-			previewTheme: CombatTrackerMusicManager.#onPreviewTheme,
-		},
 	};
 
 	static PARTS = {
@@ -62,7 +59,7 @@ class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsAppli
 			selectedTrack: track?.id,
 			fields: CombatTrackerMusicManager.#schema.fields,
 			tracks,
-			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'COMBAT.SettingsSave' }],
+			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
 	}
 
@@ -87,31 +84,13 @@ class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsAppli
 	/*  Event Handlers                              */
 	/* -------------------------------------------- */
 
-	#audioPreviewState = 0;
-
-	/**
-	 * Handle previewing a sound file for a Combat Tracker setting
-	 * @this CombatTrackerMusicManager
-	 */
-	static async #onPreviewTheme(_event, target) {
-		const themeId = target.previousElementSibling.value;
-		const theme = CONFIG.Combat.sounds[themeId];
-		if (!theme) return;
-		const announcements = CONST.COMBAT_ANNOUNCEMENTS;
-		const announcement = announcements[this.#audioPreviewState++ % announcements.length];
-		const sounds = theme[announcement];
-		if (!sounds) return;
-		const src = sounds[Math.floor(Math.random() * sounds.length)];
-		game.audio.play(src, { context: game.audio.interface });
-	}
-
 	/**
 	 * Save all settings.
 	 */
 	static async #saveSettings(_event, _form, submitData) {
-		const settings = foundry.utils.expandObject(submitData.object);
-		const playlist = game.playlists.get(settings.playlist);
-		const track = playlist?.sounds.get(settings.track);
+		const data = foundry.utils.expandObject(submitData.object);
+		const playlist = game.playlists.get(data.playlist);
+		const track = playlist?.sounds.get(data.track);
 		const sound = stringifyMusic(track ?? playlist);
 		game.combat
 			?.update({

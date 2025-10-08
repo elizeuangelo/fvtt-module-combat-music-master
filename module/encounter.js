@@ -104,7 +104,7 @@ class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsAppli
 
 Hooks.on('getCombatContextOptions', addButtonToContextMenu);
 function addButtonToContextMenu(_combatTracker, options) {
-	options.push({
+	options.unshift({
 		name: 'Set Encounter Music',
 		icon: '<i class="fas fa-music"></i>',
 		condition: () => game.user.isGM,

@@ -9,7 +9,7 @@ import {
 } from './music-manager.js';
 import { MODULE_ID, getSetting } from './settings.js';
 
-const menu = `<a class="item" data-tab="music-manager"><i class="fas fa-music"></i> Music</a>`;
+const menu = `<a data-action="tab" data-group="sheet" data-tab="music"><i class="fa-solid fa-music" inert></i> <span>Music</span></a>`;
 let section;
 
 export function createOption(sound) {
@@ -22,7 +22,17 @@ function fillOptions(html, options) {
 	html.innerHTML = options.map((opt) => createOption(opt)).join('');
 }
 
-let menuTab = false;
+function addNewTrackSelectionRow(targetElement, trackData) {
+	const clone = targetElement.cloneNode(true);
+	const index = targetElement.parentElement.querySelectorAll('fieldset.track-selection').length;
+	clone.dataset.index = index;
+	clone.querySelector('select[name=playlist]').value = trackData[0]?.parent?.id ?? '';
+	clone.querySelector('select[name=track]').value = trackData[0]?.id ?? '';
+	clone.querySelector('input[name=threshold]').value = trackData[1] ?? 0;
+	targetElement.parentElement.appendChild(clone);
+	return clone;
+}
+
 function addTab(tokenConfig, html, data) {
 	const token = tokenConfig._preview;
 	const musicList = token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]];
@@ -37,7 +47,8 @@ function addTab(tokenConfig, html, data) {
 	data['musicPriority'] = token.getFlag(MODULE_ID, 'priority') ?? 10;
 	data['musicActive'] = token.getFlag(MODULE_ID, 'active') ?? false;
 	data['turnOnly'] = token.getFlag(MODULE_ID, 'turnOnly') ?? false;
-	html.querySelector('nav.sheet-tabs.tabs').appendChild($(menu)[0]);
+	const menuEl = $(menu)[0];
+	html.querySelector('nav.sheet-tabs.tabs').appendChild(menuEl);
 
 	function selectPlaylist(ev) {
 		const playlist = game.playlists.get(ev.target.value);
@@ -50,6 +61,7 @@ function addTab(tokenConfig, html, data) {
 	function actionButton(event) {
 		event.preventDefault();
 		const priorityEl = sectionEl.querySelector('input[name=priority]');
+		const rowEl = button.closest('.track-selection');
 		const priority = +priorityEl.value;
 		const button = event.currentTarget;
 		const action = button.dataset.action;
@@ -60,8 +72,9 @@ function addTab(tokenConfig, html, data) {
 				tracks.push(['', tracks.length === 1 ? 50 : 0]);
 				break;
 			case 'removeTrack':
-				let idx = +button.closest('.track-selection').dataset.index;
+				let idx = +rowEl.dataset.index;
 				tracks.splice(idx, 1);
+				rowEl.remove();
 				break;
 		}
 		tokenConfig._previewChanges({
@@ -72,8 +85,6 @@ function addTab(tokenConfig, html, data) {
 				turnOnly: turnOnlyEl.checked,
 			},
 		});
-		menuTab = true;
-		tokenConfig.render();
 	}
 
 	function getMusicList() {
@@ -89,7 +100,7 @@ function addTab(tokenConfig, html, data) {
 		return musicList;
 	}
 
-	function onSubmission(ev) {
+	function onSubmission() {
 		const active = activeEl.checked;
 		const priority = +priorityEl.value;
 		const resource = resourceEl.value;
@@ -125,17 +136,19 @@ function addTab(tokenConfig, html, data) {
 		fillOptions(trackEl, [undefined, ...tracks.map((p) => ({ id: p.id, name: p.name, selected: p === track }))]);
 		playlistEl.addEventListener('change', selectPlaylist);
 	}
-	const footer = html.querySelector('footer.sheet-footer');
+	const footer = html.querySelector('footer.form-footer');
 	footer.insertAdjacentElement('beforebegin', sectionEl);
 	if (html.classList.contains('app')) {
 		const width = tokenConfig.options.width + 80;
 		html.style.width = `${width}px`;
 		tokenConfig.position.width = width;
 	}
-	if (menuTab) tokenConfig.activateTab('music-manager');
-	menuTab = false;
+	if (tokenConfig.tabGroups.sheet === 'music') {
+		menuEl.classList.add('active');
+		sectionEl.classList.add('active');
+	}
 	sectionEl.querySelectorAll('a.action-button').forEach((el) => el.addEventListener('click', actionButton));
-	resourceEl.addEventListener('change', tokenConfig._onBarChange.bind(tokenConfig));
+	resourceEl.addEventListener('change', tokenConfig._onChangeBar.bind(tokenConfig));
 	formEl.addEventListener('submit', onSubmission);
 }
 

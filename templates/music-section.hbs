@@ -1,4 +1,4 @@
-<div class="tab" data-group="main" data-tab="music-manager">
+<div class="tab scrollable" data-group="sheet" data-tab="music">
 	<div class="form-group">
 		<label>Active</label>
 		<input type="checkbox" name="music-active" {{#if musicActive}}checked{{/if}}>
@@ -19,7 +19,7 @@
 		<div class="form-fields">
 			<input type="number" value="{{musicPriority}}" step="any" name="priority" placeholder="10" />
 		</div>
-		<p class="notes">The priority this token's playlist will compete against the others.</p>
+		<p class="hint">The priority this token's playlist will compete against the others.</p>
 	</div>
 
 	<div class="form-group">
@@ -33,17 +33,17 @@
 
 	{{#unless isDefault}}
 	<div class="form-group slim">
-		<div class="form-fields">
-			<input type="number" class="tracked-resource-value" value="{{trackedResource.value}}" disabled />
+		<div class="form-fields bar-data">
+			<input type="number" data-tracked-resource-value value="{{trackedResource.value}}" disabled />
 			<span class="sep">/</span>
-			<input type="number" class="tracked-resource-max" value="{{trackedResource.max}}" disabled />
+			<input type="number" data-tracked-resource-max value="{{trackedResource.max}}" disabled />
 		</div>
 	</div>
 	{{/unless}}
 
 	<hr />
 
-	<div class="track-selections" data-group="vision">
+	<div class="track-selections">
 		<header class="track-selection">
 			<div class="track-selection-playlist">Playlist</div>
 			<div class="track-selection-track">Track</div>
@@ -54,33 +54,35 @@
 				</a>
 			</div>
 		</header>
+		<section id="track-selections">
+			{{!-- Each track selection --}}
+			{{#each trackSelection}}
+			<fieldset class="track-selection" data-index="{{@index}}">
+				<div>
+					<select name="playlist">
+						<option value=""></option>
+					</select>
+				</div>
 
-		{{#each trackSelection}}
-		<fieldset class="track-selection" data-index="{{@index}}">
-			<div>
-				<select name="playlist">
-					<option value=""></option>
-				</select>
-			</div>
+				<div>
+					<select name="track">
+						<option value=""></option>
+					</select>
+				</div>
 
-			<div>
-				<select name="track">
-					<option value=""></option>
-				</select>
-			</div>
-
-			<div>
-				<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
-				this.disabled}}disabled{{/if}}>
-			</div>
-			<div class="track-selection-controls">
-				{{#unless this.disabled}}
-				<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
-					<i class="fa-solid fa-times"></i>
-				</a>
-				{{/unless}}
-			</div>
-		</fieldset>
-		{{/each}}
+				<div>
+					<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
+					this.disabled}}disabled{{/if}}>
+				</div>
+				<div class="track-selection-controls">
+					{{#unless this.disabled}}
+					<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
+						<i class="fa-solid fa-times"></i>
+					</a>
+					{{/unless}}
+				</div>
+			</fieldset>
+			{{/each}}
+		</section>
 	</div>
 </div>

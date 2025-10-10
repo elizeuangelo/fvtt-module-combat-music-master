@@ -47,12 +47,14 @@
 }
 
 .track-selections .track-selection {
-    display: flex;
-    flex-wrap: nowrap;
-    text-align: left;
-    margin: 0 0 0.5rem;
+    display: grid;
+    grid-template-columns: 3fr 3fr 2fr 1fr;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
     padding: 0;
     border: none;
+
 }
 
 .track-selections header.track-selection {

@@ -1,3 +1,4 @@
+// TODO: Remove ALL jQuery from hooks as they now use HTMLElements
 import {
 	parseMusic,
 	updateCombatMusic,
@@ -9,8 +10,253 @@ import {
 } from './music-manager.js';
 import { MODULE_ID, getSetting } from './settings.js';
 
-const menu = `<a data-action="tab" data-group="sheet" data-tab="music"><i class="fa-solid fa-music" inert></i> <span>Music</span></a>`;
-let section;
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+/**
+ * Token Music Configuration Application
+ */
+class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
+	static DEFAULT_OPTIONS = {
+		id: 'token-music-config',
+		tag: 'form',
+		window: {
+			contentClasses: ['standard-form', 'token-config'],
+			icon: 'fa-solid fa-music',
+			title: 'Token Combat Music Configuration',
+		},
+		form: {
+			closeOnSubmit: true,
+			handler: TokenMusicConfig.#saveSettings,
+		},
+		position: { width: 500, height: 'auto' },
+	};
+
+	static PARTS = {
+		body: { template: 'modules/combat-music-master/templates/music-section.hbs' },
+		footer: { template: 'templates/generic/form-footer.hbs' },
+	};
+
+	constructor(token, options = {}) {
+		super(options);
+		this.token = token;
+		this._preview = this._prepareData();
+	}
+
+	_prepareData() {
+		const token = this.token;
+		return {
+			musicList: token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]],
+			resource: token.getFlag(MODULE_ID, 'resource'),
+			priority: token.getFlag(MODULE_ID, 'priority') ?? 10,
+			active: token.getFlag(MODULE_ID, 'active') ?? false,
+			turnOnly: token.getFlag(MODULE_ID, 'turnOnly') ?? false,
+		};
+	}
+
+	_prepareSubmitData() {
+		const active = this.element.querySelector('input[name="music-active"]').checked;
+		const priority = parseInt(this.element.querySelector('input[name="priority"]').value) || 10;
+		const turnOnly = this.element.querySelector('input[name="turn-only"]').checked;
+		const resource = this.element.querySelector('select[name="tracked-resource"]').value;
+		const musicList = this.#getTrackData();
+		return { musicList, resource, active, priority, turnOnly };
+	}
+
+	_previewChanges(data) {
+		this._preview = { ...this._prepareSubmitData(), ...data };
+	}
+
+	_prepareContext(_options) {
+		const token = this.token;
+		const data = this._preview;
+		const musicList = data.musicList;
+		const resource = data.resource;
+		const trackedResource = resource
+			? token.getBarAttribute?.('tracked-resource', {
+					alternative: resource,
+			  })
+			: token.getBarAttribute('bar1');
+
+		const trackSelection = musicList.map((music, index) => {
+			const parsed = parseMusic(music[0]);
+			const playlist = 'error' in parsed ? undefined : parsed?.parent ?? parsed;
+			const track = playlist === parsed ? undefined : 'error' in parsed ? undefined : parsed;
+			return {
+				threshold: music[1],
+				disabled: index === 0,
+				playlistId: playlist?.id ?? '',
+				trackId: track?.id ?? '',
+			};
+		});
+
+		const usesTrackableAttributes = !foundry.utils.isEmpty(CONFIG.Actor.trackableAttributes);
+		const attributeSource =
+			this.actor?.system instanceof foundry.abstract.DataModel && usesTrackableAttributes
+				? this.actor?.type
+				: this.actor?.system;
+		const TokenDocument = foundry.utils.getDocumentClass('Token');
+		const attributes = TokenDocument.getTrackedAttributes(attributeSource);
+		const barAttributes = TokenDocument.getTrackedAttributeChoices(attributes);
+		const completeAttributes = barAttributes.filter((attr) => attr.group === 'Attribute Bars');
+
+		return {
+			trackedResource,
+			trackSelection,
+			completeAttributes,
+			musicPriority: data.priority,
+			musicActive: data.active,
+			turnOnly: data.turnOnly,
+			isDefault: false,
+			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
+		};
+	}
+
+	_onRender(context, options) {
+		super._onRender(context, options);
+		this.#populatePlaylistOptions(context);
+		this.setupEventListeners();
+	}
+
+	#updateTracksForPlaylist(playlistSelect, playlistId, selectedTrackId = '') {
+		const trackSelect = playlistSelect.parentElement.nextElementSibling?.querySelector('select[name="track"]');
+		if (!trackSelect) return;
+
+		trackSelect.innerHTML = '<option value=""></option>';
+
+		if (!playlistId) return;
+
+		const playlist = game.playlists.get(playlistId);
+		if (!playlist) return;
+
+		playlist.sounds.contents.forEach((track) => {
+			const option = document.createElement('option');
+			option.value = track.id;
+			option.textContent = track.name;
+			option.selected = track.id === selectedTrackId;
+			trackSelect.appendChild(option);
+		});
+	}
+
+	#populatePlaylistOptions(context) {
+		const combatPlaylists = getCombatMusic();
+		const playlistSelects = this.element.querySelectorAll('select[name="playlist"]');
+
+		playlistSelects.forEach((select, index) => {
+			const trackSelection = context.trackSelection[index];
+			if (!trackSelection) return;
+
+			select.innerHTML = '<option value=""></option>';
+			combatPlaylists.forEach((playlist) => {
+				const option = document.createElement('option');
+				option.value = playlist.id;
+				option.textContent = playlist.name;
+				option.selected = playlist.id === trackSelection.playlistId;
+				select.appendChild(option);
+			});
+
+			if (trackSelection.playlistId) {
+				this.#updateTracksForPlaylist(select, trackSelection.playlistId, trackSelection.trackId);
+			}
+		});
+	}
+
+	/* -------------------------------------------- */
+	/*  Event Handlers                              */
+	/* -------------------------------------------- */
+
+	setupEventListeners() {
+		// Add track button
+		this.element.querySelector('[data-action="addTrack"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#onAddTrack(event);
+		});
+
+		// Remove track buttons
+		this.element.querySelectorAll('[data-action="removeTrack"]').forEach((button) => {
+			button.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.#onRemoveTrack(event);
+			});
+		});
+
+		// Playlist change handlers
+		this.element.querySelectorAll('select[name="playlist"]').forEach((select) => {
+			select.addEventListener('change', this.#onPlaylistChange.bind(this));
+		});
+
+		// Resource change handler
+		this.element
+			.querySelector('select[name=tracked-resource')
+			.addEventListener('change', this.#onChangeBar.bind(this));
+	}
+
+	/**
+	 * Handle changing the attribute bar in the drop-down selector to update the default current and max value
+	 * @param {Event} event  The select input change event
+	 */
+	#onChangeBar(event) {
+		const form = this.form;
+		const attr = this.token.getBarAttribute('', { alternative: event.target.value });
+		const barName = event.target.name;
+		form.querySelector(`input[data-${barName}-value]`).value = attr !== null ? attr.value : '';
+		form.querySelector(`input[data-${barName}-max]`).value = attr !== null && attr.type === 'bar' ? attr.max : '';
+	}
+
+	#onPlaylistChange(event) {
+		this.#updateTracksForPlaylist(event.target, event.target.value);
+	}
+
+	#getTrackData() {
+		const trackData = [];
+		const trackSelections = this.element.querySelectorAll('fieldset.track-selection');
+
+		trackSelections.forEach((el) => {
+			const threshold = parseInt(el.querySelector('input[name="threshold"]').value) || 0;
+			const playlistEl = el.querySelector('select[name="playlist"]');
+			const trackEl = el.querySelector('select[name="track"]');
+
+			const playlist = game.playlists.get(playlistEl.value);
+			const track = playlist?.sounds.get(trackEl.value);
+
+			trackData.push([stringifyMusic(track || playlist), threshold]);
+		});
+
+		return trackData;
+	}
+
+	async #onAddTrack(event) {
+		event.preventDefault();
+		const musicList = this.#getTrackData();
+		const newThreshold = ~~(musicList.at(-1)[1] / 2);
+		musicList.push(['', newThreshold]);
+		this._previewChanges({ musicList });
+		this.render(true);
+	}
+
+	async #onRemoveTrack(event) {
+		event.preventDefault();
+		const trackSelection = event.target.closest('.track-selection');
+		const index = parseInt(trackSelection.dataset.index);
+
+		const musicList = this.#getTrackData();
+
+		// Remove track at index
+		musicList.splice(index, 1);
+
+		this._previewChanges({ musicList });
+		this.render(true);
+	}
+
+	/**
+	 * @this {TokenMusicConfig}
+	 */
+	static async #saveSettings(_event, _form, _formData) {
+		const data = this._prepareSubmitData();
+		await this.token.update({ [`flags.${MODULE_ID}`]: data });
+	}
+}
 
 export function createOption(sound) {
 	return `<option value="${sound ? sound.id : ''}" ${sound?.selected ? 'selected' : ''}> ${
@@ -18,138 +264,35 @@ export function createOption(sound) {
 	}</option>`;
 }
 
-function fillOptions(html, options) {
-	html.innerHTML = options.map((opt) => createOption(opt)).join('');
-}
-
-function addNewTrackSelectionRow(targetElement, trackData) {
-	const clone = targetElement.cloneNode(true);
-	const index = targetElement.parentElement.querySelectorAll('fieldset.track-selection').length;
-	clone.dataset.index = index;
-	clone.querySelector('select[name=playlist]').value = trackData[0]?.parent?.id ?? '';
-	clone.querySelector('select[name=track]').value = trackData[0]?.id ?? '';
-	clone.querySelector('input[name=threshold]').value = trackData[1] ?? 0;
-	targetElement.parentElement.appendChild(clone);
-	return clone;
-}
-
-function addTab(tokenConfig, html, data) {
-	const token = tokenConfig._preview;
-	const musicList = token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]];
-	const resource = token.getFlag(MODULE_ID, 'resource');
-	data['trackedResource'] = resource
-		? token.getBarAttribute?.('tracked-resource', {
-				alternative: resource,
-		  })
-		: token.getBarAttribute('bar1');
-	data['completeAttributes'] = data.barAttributes.filter((attr) => attr.group === 'Attribute Bars');
-	data['trackSelection'] = musicList.map((music, index) => ({ threshold: music[1], disabled: index === 0 }));
-	data['musicPriority'] = token.getFlag(MODULE_ID, 'priority') ?? 10;
-	data['musicActive'] = token.getFlag(MODULE_ID, 'active') ?? false;
-	data['turnOnly'] = token.getFlag(MODULE_ID, 'turnOnly') ?? false;
-	const menuEl = $(menu)[0];
-	html.querySelector('nav.sheet-tabs.tabs').appendChild(menuEl);
-
-	function selectPlaylist(ev) {
-		const playlist = game.playlists.get(ev.target.value);
-		const tracks = playlist?.sounds.contents ?? [];
-		this.parentElement.parentElement.querySelector('select[name=track]').innerHTML = [undefined, ...tracks]
-			.map((track) => createOption(track))
-			.join('');
-	}
-
-	function actionButton(event) {
-		event.preventDefault();
-		const priorityEl = sectionEl.querySelector('input[name=priority]');
-		const rowEl = button.closest('.track-selection');
-		const priority = +priorityEl.value;
-		const button = event.currentTarget;
-		const action = button.dataset.action;
-		game.tooltip.deactivate();
-		const tracks = getMusicList().map(([sound, priority]) => [stringifyMusic(sound), priority]);
-		switch (action) {
-			case 'addTrack':
-				tracks.push(['', tracks.length === 1 ? 50 : 0]);
-				break;
-			case 'removeTrack':
-				let idx = +rowEl.dataset.index;
-				tracks.splice(idx, 1);
-				rowEl.remove();
-				break;
-		}
-		tokenConfig._previewChanges({
-			[`flags.${MODULE_ID}`]: {
-				musicList: tracks,
-				priority,
-				resource: resourceEl.value,
-				turnOnly: turnOnlyEl.checked,
+export function getActorSheetHeaderControls(sheet, buttons) {
+	try {
+		if (!game.user.isGM) return;
+		buttons.unshift({
+			label: 'Combat Music',
+			class: 'configure-combat-music',
+			icon: 'fas fa-music',
+			onClick: (event) => {
+				event.preventDefault();
+				new TokenMusicConfig(sheet.document).render(true);
 			},
 		});
+	} catch (error) {
+		console.error('Combat Music Master | Error adding actor sheet header controls:', error);
 	}
+}
 
-	function getMusicList() {
-		const musicList = [];
-		for (const el of musicListEls) {
-			const threshold = +el.querySelector('input[name=threshold]').value;
-			const playlistEl = el.querySelector('select[name=playlist]');
-			const trackEl = el.querySelector('select[name=track]');
-			const playlist = game.playlists.get(playlistEl.value);
-			const track = playlist?.sounds.get(trackEl.value);
-			musicList.push([track || playlist, threshold]);
-		}
-		return musicList;
+export function getActorSheetHeaderButtons(sheet, buttons) {
+	try {
+		if (!game.user.isGM) return;
+		buttons.unshift({
+			label: 'Combat Music',
+			class: 'configure-combat-music',
+			icon: 'fas fa-music',
+			onclick: () => new TokenMusicConfig(sheet.document).render(true),
+		});
+	} catch (error) {
+		console.error('Combat Music Master | Error adding actor sheet header buttons:', error);
 	}
-
-	function onSubmission() {
-		const active = activeEl.checked;
-		const priority = +priorityEl.value;
-		const resource = resourceEl.value;
-		const turnOnly = turnOnlyEl.checked;
-		setTokenConfig(tokenConfig.token, resource, getMusicList(), priority, turnOnly, active);
-	}
-
-	const sectionEl = $(
-		section(data, {
-			allowProtoMethodsByDefault: true,
-			allowProtoPropertiesByDefault: true,
-		})
-	)[0];
-	const activeEl = sectionEl.querySelector('input[name=music-active]');
-	const priorityEl = sectionEl.querySelector('input[name=priority]');
-	const turnOnlyEl = sectionEl.querySelector('input[name=turn-only]');
-	const resourceEl = sectionEl.querySelector('select[name=tracked-resource');
-	const musicListEls = sectionEl.querySelectorAll('fieldset.track-selection');
-	const formEl = html.nodeName === 'FORM' ? html : html.querySelector('form');
-	const combatPlaylists = getCombatMusic();
-	for (let i = 0; i < musicListEls.length; i++) {
-		const el = musicListEls[i];
-		const playlistEl = el.querySelector('select[name=playlist]');
-		const trackEl = el.querySelector('select[name=track]');
-		const selected = parseMusic(musicList[i][0]);
-		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
-		const track = playlist === selected ? undefined : selected;
-		const tracks = playlist ? playlist.sounds.contents : [];
-		fillOptions(playlistEl, [
-			undefined,
-			...combatPlaylists.map((p) => ({ id: p.id, name: p.name, selected: p === playlist })),
-		]);
-		fillOptions(trackEl, [undefined, ...tracks.map((p) => ({ id: p.id, name: p.name, selected: p === track }))]);
-		playlistEl.addEventListener('change', selectPlaylist);
-	}
-	const footer = html.querySelector('footer.form-footer');
-	footer.insertAdjacentElement('beforebegin', sectionEl);
-	if (html.classList.contains('app')) {
-		const width = tokenConfig.options.width + 80;
-		html.style.width = `${width}px`;
-		tokenConfig.position.width = width;
-	}
-	if (tokenConfig.tabGroups.sheet === 'music') {
-		menuEl.classList.add('active');
-		sectionEl.classList.add('active');
-	}
-	sectionEl.querySelectorAll('a.action-button').forEach((el) => el.addEventListener('click', actionButton));
-	resourceEl.addEventListener('change', tokenConfig._onChangeBar.bind(tokenConfig));
-	formEl.addEventListener('submit', onSubmission);
 }
 
 function resourceTracker(actor) {
@@ -166,13 +309,14 @@ function resourceTracker(actor) {
 export function getTokenMusic(token) {
 	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
-	const attribute =
-		foundry.utils.getProperty(token.actor.system, token.getFlag(MODULE_ID, 'resource')) ??
-		token.getBarAttribute('bar1');
+
+	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
 	const musicList = token.getFlag(MODULE_ID, 'musicList');
 	if (!musicList) return;
+
 	if (attribute.value > attribute.max) attribute.value = attribute.max;
 	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
+
 	for (let i = musicList.length; i > 0; i--) {
 		const [music, threshold] = musicList[i - 1];
 		if (attrThreshold <= threshold) {
@@ -188,13 +332,10 @@ export function getTokenMusic(token) {
 	}
 }
 
-Hooks.once('setup', async () => {
-	section = await foundry.applications.handlebars.getTemplate(
-		'modules/combat-music-master/templates/music-section.hbs'
-	);
-	Hooks.on('renderTokenConfig', addTab);
+Hooks.once('setup', () => {
 	if (game.user.isGM) {
 		Hooks.on('updateActor', resourceTracker);
 		Hooks.on('updateToken', (token) => resourceTracker(token.actor));
 	}
 });
+Hooks.on('getHeaderControlsTokenConfig', getActorSheetHeaderControls);

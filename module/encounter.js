@@ -2,9 +2,9 @@ import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js'
 import { MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
 
-class CombatTrackerMusicManager extends foundry.applications.api.HandlebarsApplicationMixin(
-	foundry.applications.api.ApplicationV2
-) {
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	static DEFAULT_OPTIONS = {
 		id: 'combat-master-tracker',
 		tag: 'form',

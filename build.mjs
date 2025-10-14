@@ -92,7 +92,7 @@ function updateFoundryRelease(dryRun = true) {
 	if (dryRun) {
 		parameters['dry-run'] = true;
 	}
-	return fetch('https://api.foundryvtt.com/_api/packages/release_version/', {
+	return fetch('https://foundryvtt.com/_api/packages/release_version/', {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: env.FOUNDRY_PACKAGE_API_KEY,

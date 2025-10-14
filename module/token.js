@@ -264,31 +264,14 @@ export function createOption(sound) {
 	}</option>`;
 }
 
-export function getActorSheetHeaderControls(sheet, buttons) {
+export function getTokenHeaderButtons(sheet, buttons) {
 	try {
 		if (!game.user.isGM) return;
 		buttons.unshift({
 			label: 'Combat Music',
 			class: 'configure-combat-music',
 			icon: 'fas fa-music',
-			onClick: (event) => {
-				event.preventDefault();
-				new TokenMusicConfig(sheet.document).render(true);
-			},
-		});
-	} catch (error) {
-		console.error('Combat Music Master | Error adding actor sheet header controls:', error);
-	}
-}
-
-export function getActorSheetHeaderButtons(sheet, buttons) {
-	try {
-		if (!game.user.isGM) return;
-		buttons.unshift({
-			label: 'Combat Music',
-			class: 'configure-combat-music',
-			icon: 'fas fa-music',
-			onclick: () => new TokenMusicConfig(sheet.document).render(true),
+			onClick: () => new TokenMusicConfig(sheet.token).render(true),
 		});
 	} catch (error) {
 		console.error('Combat Music Master | Error adding actor sheet header buttons:', error);
@@ -338,4 +321,4 @@ Hooks.once('setup', () => {
 		Hooks.on('updateToken', (token) => resourceTracker(token.actor));
 	}
 });
-Hooks.on('getHeaderControlsTokenConfig', getActorSheetHeaderControls);
+Hooks.on('getHeaderControlsTokenApplication', getTokenHeaderButtons);

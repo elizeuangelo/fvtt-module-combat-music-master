@@ -117,14 +117,12 @@ export function setCombatMusic(sound, combat = game.combat, token) {
 
 export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
 	sounds = (sounds ?? []).sort((a, b) => b[1] - a[1]);
-	token.update({
-		[`flags.${MODULE_ID}`]: {
-			active,
-			resource,
-			priority,
-			musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),
-			turnOnly,
-		},
+	token.setFlag(MODULE_ID, {
+		active,
+		resource,
+		priority,
+		musicList: sounds.map(([sound, threshold]) => [stringifyMusic(sound), threshold]),
+		turnOnly,
 	});
 }
 

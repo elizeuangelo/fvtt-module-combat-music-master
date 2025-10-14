@@ -1,8 +1,8 @@
 import { getSetting, setSetting, MODULE_ID } from './settings.js';
 
-export class PlaylistManager extends foundry.applications.api.HandlebarsApplicationMixin(
-	foundry.applications.api.ApplicationV2
-) {
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+class PlaylistManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	static DEFAULT_OPTIONS = {
 		id: 'combat-master-config',
 		tag: 'form',

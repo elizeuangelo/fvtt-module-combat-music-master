@@ -1,4 +1,4 @@
-<div class="tab scrollable" data-group="sheet" data-tab="music">
+<div class="tab flexcol">
 	<div class="form-group">
 		<label>Active</label>
 		<input type="checkbox" name="music-active" {{#if musicActive}}checked{{/if}}>
@@ -8,7 +8,7 @@
 		<label>Turn Only</label>
 		<input type="checkbox" name="turn-only" {{#if turnOnly}}checked{{/if}}>
 		<p class="hint">
-			Wether the track should only play on the token's turn.
+			Whether the track should only play on the token's turn.
 			<br />
 			Priority is still respected -> will compete against other tracks with same priority.
 		</p>
@@ -54,35 +54,33 @@
 				</a>
 			</div>
 		</header>
-		<section id="track-selections">
-			{{!-- Each track selection --}}
-			{{#each trackSelection}}
-			<fieldset class="track-selection" data-index="{{@index}}">
-				<div>
-					<select name="playlist">
-						<option value=""></option>
-					</select>
-				</div>
+		{{!-- Each track selection --}}
+		{{#each trackSelection}}
+		<fieldset class="track-selection" data-index="{{@index}}">
+			<div>
+				<select name="playlist">
+					<option value=""></option>
+				</select>
+			</div>
 
-				<div>
-					<select name="track">
-						<option value=""></option>
-					</select>
-				</div>
+			<div>
+				<select name="track">
+					<option value=""></option>
+				</select>
+			</div>
 
-				<div>
-					<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any" {{#if
-					this.disabled}}disabled{{/if}}>
-				</div>
-				<div class="track-selection-controls">
-					{{#unless this.disabled}}
-					<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
-						<i class="fa-solid fa-times"></i>
-					</a>
-					{{/unless}}
-				</div>
-			</fieldset>
-			{{/each}}
-		</section>
+			<div>
+				<input name="threshold" type="number" value="{{this.threshold}}" min="0" max="100" step="any"
+				{{#if this.disabled}}disabled{{/if}}>
+			</div>
+			<div class="track-selection-controls">
+				{{#unless this.disabled}}
+				<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
+					<i class="fa-solid fa-times"></i>
+				</a>
+				{{/unless}}
+			</div>
+		</fieldset>
+		{{/each}}
 	</div>
 </div>

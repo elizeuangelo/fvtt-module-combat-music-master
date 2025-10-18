@@ -25,4 +25,4 @@ First things first! Let's start by configuring the module, so the module knows w
 
 There is a new button in the encounter tracker for overring the battle music for a specific encounter.
 
-In the Token Configuration application there is a new Music tab, so you can configure specific music and priority for the token.
+In the **Token Configuration** application there is a new button on the header called **Combat Music**, using that application you can configure specific music configurations related to that specific token.

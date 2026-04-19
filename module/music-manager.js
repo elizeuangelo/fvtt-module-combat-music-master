@@ -220,28 +220,23 @@ export async function updateTurnMusic(combat) {
 		return;
 	}
 
-	// No Combat Theme — check for trait-based music.
-	const traitMusic = (() => {
-		let mappings = [];
-		try { mappings = JSON.parse(game.settings.get(MODULE_ID, 'traitMappings')) ?? []; } catch { }
-		if (!mappings.length) return null;
+	// No Combat Theme — check for trait-based music rules (PF2e).
+	const traitRules = getSetting('traitRules') ?? [];
+	if (traitRules.length > 0) {
 		const hostileTraits = new Set();
 		for (const combatant of combat.combatants.contents) {
-			const actor = combatant.actor;
-			if (!actor || actor.type === 'character') continue;
-			for (const trait of (actor.system?.traits?.value ?? [])) hostileTraits.add(trait.toLowerCase());
+			if (!combatant.token?.actor) continue;
+			if (combatant.token.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) continue;
+			for (const trait of (combatant.token.actor.system?.traits?.value ?? [])) hostileTraits.add(trait.toLowerCase());
 		}
-		if (!hostileTraits.size) return null;
-		let best = null;
-		for (const mapping of mappings) {
-			if (!hostileTraits.has(mapping.trait)) continue;
-			if (!best || mapping.priority > best.priority) best = mapping;
+		if (hostileTraits.size > 0) {
+			const matchingRules = traitRules.filter((r) => r.trait && hostileTraits.has(r.trait.toLowerCase()) && r.music);
+			if (matchingRules.length > 0) {
+				const best = matchingRules.reduce((a, b) => b.priority > a.priority ? b : a);
+				updateCombatMusic(combat, best.music, '');
+				return;
+			}
 		}
-		return best?.music ?? null;
-	})();
-	if (traitMusic) {
-		updateCombatMusic(combat, traitMusic, '');
-		return;
 	}
 
 	// Fall back to the standard priority playlist system.

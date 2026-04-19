@@ -37,8 +37,10 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_onRender(context, options) {
 		super._onRender(context, options);
+		console.log('CMM | TraitMusicManager _onRender fired', this.element);
 		this.#populatePlaylistOptions(context);
 		this.#setupEventListeners();
+		console.log('CMM | addRule button:', this.element.querySelector('[data-action="addRule"]'));
 	}
 
 	#populatePlaylistOptions(context) {

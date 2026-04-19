@@ -88,6 +88,7 @@ function resumePlaylists(combat) {
 		else sound.update({ playing: false, pausedTime: null });
 	}
 	combat._combatMusic = '';
+	combat.unsetFlag(MODULE_ID, 'encounterInterrupted');
 	for (const sound of paused) sound.update({ playing: true });
 	paused = [];
 }
@@ -130,18 +131,81 @@ export function getCombatMusic() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
-export function updateTurnMusic(combat) {
+export async function updateTurnMusic(combat) {
 	if (!combat.started || getCombatMusic().length === 0) return;
-	let music = combat.getFlag(MODULE_ID, 'overrideMusic');
-	let token = '';
-	if (!music) {
-		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));
-		const musicFound = highestPriority.find((p) => p.music === music);
-		if (!musicFound) {
-			const sorted = pick(highestPriority);
-			token = sorted.token;
-			music = sorted.music;
+	const overrideMusic = combat.getFlag(MODULE_ID, 'overrideMusic');
+
+	if (overrideMusic) {
+		// An encounter track is set — check if the current combatant has token-specific music.
+		const combatantToken = combat.combatant?.token ?? null;
+		const tokenMusic = combatantToken ? getTokenMusic(combatantToken) : null;
+
+		if (tokenMusic) {
+			// This combatant has their own music. Pause the encounter track (if it isn't
+			// already paused for this reason) and play the token's music instead.
+			const encounterSound = parseMusic(overrideMusic);
+			if (!('error' in encounterSound)) {
+				const alreadyInterrupted = combat.getFlag(MODULE_ID, 'encounterInterrupted');
+				if (!alreadyInterrupted) {
+					// Mark that we've interrupted the encounter track so we know to resume it.
+					combat.setFlag(MODULE_ID, 'encounterInterrupted', true);
+					// Pause the encounter track rather than stopping it so it resumes from the same point.
+					if (encounterSound.documentName === 'PlaylistSound') {
+						pause(encounterSound);
+					} else {
+						// It's a whole playlist — pause every playing sound in it.
+						encounterSound.sounds.contents
+							.filter((s) => s.playing)
+							.forEach((s) => pause(s));
+					}
+				}
+			}
+			// Play the token's music.
+			updateCombatMusic(combat, tokenMusic, combatantToken.id);
+		} else {
+			// No token music for this combatant. If the encounter track was interrupted, resume it.
+			const wasInterrupted = combat.getFlag(MODULE_ID, 'encounterInterrupted');
+			if (wasInterrupted) {
+				combat.setFlag(MODULE_ID, 'encounterInterrupted', false);
+				// Stop whatever token music is currently playing.
+				const currentMusic = combat._combatMusic;
+				if (currentMusic) {
+					const currentSound = parseMusic(currentMusic);
+					if (!('error' in currentSound)) {
+						if (currentSound.documentName === 'PlaylistSound') await currentSound.parent.stopSound(currentSound);
+						else await currentSound.stopAll();
+					}
+				}
+				// Resume the encounter track.
+				const encounterSound = parseMusic(overrideMusic);
+				if (!('error' in encounterSound)) {
+					if (encounterSound.documentName === 'PlaylistSound') resume(encounterSound);
+					else {
+						// Resume each sound in the playlist that we had paused.
+						encounterSound.sounds.contents
+							.filter((s) => combatPaused.includes(s))
+							.forEach((s) => resume(s));
+					}
+				}
+				combat._combatMusic = overrideMusic;
+				setCombatMusic(encounterSound, combat, '');
+			} else {
+				// Normal case — just play the encounter track.
+				updateCombatMusic(combat, overrideMusic, '');
+			}
 		}
+		return;
+	}
+
+	// No encounter override — use the priority system.
+	let music = '';
+	let token = '';
+	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));
+	const musicFound = highestPriority.find((p) => p.music === music);
+	if (!musicFound) {
+		const sorted = pick(highestPriority);
+		token = sorted.token;
+		music = sorted.music;
 	}
 	if (music) updateCombatMusic(combat, music, token);
 }

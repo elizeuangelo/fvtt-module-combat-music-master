@@ -1,5 +1,5 @@
 import { MODULE_ID, getSetting, setSetting } from './settings.js';
-import { stringifyMusic, parseMusic } from './music-manager.js';
+import { parseMusic } from './music-manager.js';
 
 /* -------------------------------------------- */
 /*  Export                                      */
@@ -22,7 +22,7 @@ export async function exportMusicConfig() {
 		})),
 	}));
 
-	// Resolve trait rules to use names instead of IDs so they survive across worlds.
+	// Resolve trait rules to names so they survive across worlds.
 	const resolvedTraitRules = traitRules.map((rule) => {
 		const sound = parseMusic(rule.music);
 		const playlist = 'error' in sound ? null : sound.parent ?? sound;
@@ -49,7 +49,9 @@ export async function exportMusicConfig() {
 	const a = document.createElement('a');
 	a.href = url;
 	a.download = `${game.world.id}.music.json`;
+	document.body.appendChild(a);
 	a.click();
+	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
 	ui.notifications.info('Combat Music Master | Music config exported.');
 }
@@ -58,12 +60,15 @@ export async function exportMusicConfig() {
 /*  Import                                      */
 /* -------------------------------------------- */
 
-export async function importMusicConfig() {
-	// Open a file picker dialog.
+export function importMusicConfig() {
 	const input = document.createElement('input');
 	input.type = 'file';
 	input.accept = '.json';
+	input.style.display = 'none';
+	document.body.appendChild(input);
+
 	input.addEventListener('change', async (ev) => {
+		document.body.removeChild(input);
 		const file = ev.target.files[0];
 		if (!file) return;
 		const text = await file.text();
@@ -80,6 +85,12 @@ export async function importMusicConfig() {
 		}
 		await applyImport(data);
 	});
+
+	// Clean up if user cancels without selecting a file.
+	input.addEventListener('cancel', () => {
+		document.body.removeChild(input);
+	});
+
 	input.click();
 }
 
@@ -87,18 +98,19 @@ async function applyImport(data) {
 	ui.notifications.info('Combat Music Master | Importing music config...');
 	let defaultPlaylistId = '';
 
+	// Build a name→playlist map as we go so trait resolution sees newly created playlists.
+	const playlistMap = new Map();
+
 	for (const playlistData of data.playlists) {
-		// Find or create the playlist by name.
 		let playlist = game.playlists.contents.find((p) => p.name === playlistData.name);
 		if (!playlist) {
 			playlist = await Playlist.create({ name: playlistData.name, mode: -1 });
 		}
 
-		// Flag it as a combat playlist.
 		await playlist.setFlag(MODULE_ID, 'combat', true);
 		if (playlistData.default) defaultPlaylistId = playlist.id;
+		playlistMap.set(playlistData.name, playlist);
 
-		// For each sound, find by name or create it.
 		for (const soundData of playlistData.sounds) {
 			const existing = playlist.sounds.contents.find((s) => s.name === soundData.name);
 			if (!existing) {
@@ -110,7 +122,6 @@ async function applyImport(data) {
 					streaming: soundData.streaming ?? false,
 				}]);
 			} else {
-				// Update path in case it changed.
 				await existing.update({ path: soundData.path });
 			}
 		}
@@ -118,10 +129,10 @@ async function applyImport(data) {
 
 	if (defaultPlaylistId) await setSetting('defaultPlaylist', defaultPlaylistId);
 
-	// Re-resolve trait rules back to music IDs in this world.
+	// Resolve trait rules using the map we built during import.
 	if (data.traitRules?.length) {
 		const resolvedRules = data.traitRules.map((rule) => {
-			const playlist = game.playlists.contents.find((p) => p.name === rule.playlistName);
+			const playlist = playlistMap.get(rule.playlistName);
 			const track = rule.trackName
 				? playlist?.sounds.contents.find((s) => s.name === rule.trackName)
 				: null;

@@ -13,6 +13,7 @@ export async function exportMusicConfig() {
 	const playlists = combatPlaylists.map((playlist) => ({
 		name: playlist.name,
 		default: playlist.id === defaultPlaylistId,
+		mode: playlist.mode,
 		sounds: playlist.sounds.contents.map((sound) => ({
 			name: sound.name,
 			path: sound.path,
@@ -104,7 +105,9 @@ async function applyImport(data) {
 	for (const playlistData of data.playlists) {
 		let playlist = game.playlists.contents.find((p) => p.name === playlistData.name);
 		if (!playlist) {
-			playlist = await Playlist.create({ name: playlistData.name, mode: -1 });
+			playlist = await Playlist.create({ name: playlistData.name, mode: playlistData.mode ?? -1 });
+		} else {
+			await playlist.update({ mode: playlistData.mode ?? playlist.mode });
 		}
 
 		await playlist.setFlag(MODULE_ID, 'combat', true);

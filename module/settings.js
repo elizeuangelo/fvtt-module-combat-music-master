@@ -1,4 +1,5 @@
 export const MODULE_ID = 'combat-music-master';
+import { exportMusicConfig, importMusicConfig } from './transfer.js';
 
 const settings = {
 	defaultPlaylist: {
@@ -85,13 +86,11 @@ Hooks.on('renderSettingsConfig', (app, html) => {
 	`;
 	row.after(wrapper);
 
-	wrapper.querySelector('#cmm-export-btn').addEventListener('click', async () => {
-		const { exportMusicConfig } = await import('./transfer.js');
+	wrapper.querySelector('#cmm-export-btn').addEventListener('click', () => {
 		exportMusicConfig();
 	});
 
-	wrapper.querySelector('#cmm-import-btn').addEventListener('click', async () => {
-		const { importMusicConfig } = await import('./transfer.js');
+	wrapper.querySelector('#cmm-import-btn').addEventListener('click', () => {
 		importMusicConfig();
 	});
 });

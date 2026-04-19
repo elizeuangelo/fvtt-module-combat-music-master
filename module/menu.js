@@ -78,23 +78,21 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#setupEventListeners() {
-		this.element.querySelector('[data-action="addRule"]')?.addEventListener('click', (ev) => {
+		this.element.addEventListener('click', (ev) => {
+			const action = ev.target.closest('[data-action]')?.dataset.action;
+			if (!action) return;
 			ev.preventDefault();
 			ev.stopPropagation();
-			this._preview = this.#getRuleData();
-			this._preview.push({ trait: '', playlistId: '', trackId: '', priority: 10 });
-			this.render(true);
-		});
-
-		this.element.querySelectorAll('[data-action="removeRule"]').forEach((btn) => {
-			btn.addEventListener('click', (ev) => {
-				ev.preventDefault();
-				ev.stopPropagation();
+			if (action === 'addRule') {
+				this._preview = this.#getRuleData();
+				this._preview.push({ trait: '', playlistId: '', trackId: '', priority: 10 });
+				this.render(true);
+			} else if (action === 'removeRule') {
 				const index = parseInt(ev.target.closest('fieldset').dataset.index);
 				this._preview = this.#getRuleData();
 				this._preview.splice(index, 1);
 				this.render(true);
-			});
+			}
 		});
 	}
 

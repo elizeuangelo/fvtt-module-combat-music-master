@@ -8,9 +8,9 @@
 			<div class="trait-rule-track">Track</div>
 			<div class="trait-rule-priority">Priority</div>
 			<div class="trait-rule-controls">
-				<button type="button" class="action-button" data-action="addRule" data-tooltip="Add Rule">
+				<a class="action-button" data-action="addRule" data-tooltip="Add Rule">
 					<i class="fa-solid fa-plus"></i>
-				</button>
+				</a>
 			</div>
 		</header>
 		{{#each rules}}
@@ -32,9 +32,9 @@
 				<input type="number" name="priority" value="{{this.priority}}" placeholder="10" min="1" />
 			</div>
 			<div class="trait-rule-controls">
-				<button type="button" class="action-button" data-action="removeRule" data-tooltip="Remove Rule">
+				<a class="action-button" data-action="removeRule" data-tooltip="Remove Rule">
 					<i class="fa-solid fa-times"></i>
-				</button>
+				</a>
 			</div>
 		</fieldset>
 		{{/each}}

@@ -21,7 +21,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 	};
 
 	static PARTS = {
-		body: { template: 'modules/david-combat-music-master/templates/tracker.hbs', scrollable: [''] },
+		body: { template: 'modules/combat-music-master/templates/tracker.hbs', scrollable: [''] },
 		footer: { template: 'templates/generic/form-footer.hbs' },
 	};
 

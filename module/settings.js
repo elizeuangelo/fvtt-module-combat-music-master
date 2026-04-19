@@ -54,4 +54,38 @@ Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {
 		game.settings.register(MODULE_ID, key, setting);
 	}
+
+	game.settings.registerMenu(MODULE_ID, 'exportMusic', {
+		name: 'Export Music Config',
+		label: 'Export',
+		hint: 'Download a JSON of all combat playlists, their tracks, and trait rules.',
+		icon: 'fas fa-file-export',
+		restricted: true,
+		type: class extends foundry.applications.api.ApplicationV2 {
+			static DEFAULT_OPTIONS = { id: 'cmm-export' };
+			async _renderHTML() {}
+			async _replaceHTML() {
+				const { exportMusicConfig } = await import('./transfer.js');
+				await exportMusicConfig();
+				this.close();
+			}
+		},
+	});
+
+	game.settings.registerMenu(MODULE_ID, 'importMusic', {
+		name: 'Import Music Config',
+		label: 'Import',
+		hint: 'Load a previously exported music config JSON into this world.',
+		icon: 'fas fa-file-import',
+		restricted: true,
+		type: class extends foundry.applications.api.ApplicationV2 {
+			static DEFAULT_OPTIONS = { id: 'cmm-import' };
+			async _renderHTML() {}
+			async _replaceHTML() {
+				const { importMusicConfig } = await import('./transfer.js');
+				await importMusicConfig();
+				this.close();
+			}
+		},
+	});
 });

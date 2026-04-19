@@ -45,15 +45,7 @@ export async function exportMusicConfig() {
 	};
 
 	const json = JSON.stringify(data, null, 2);
-	const blob = new Blob([json], { type: 'application/json' });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = `${game.world.id}.music.json`;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
+	saveDataToFile(json, 'application/json', `${game.world.id}.music.json`);
 	ui.notifications.info('Combat Music Master | Music config exported.');
 }
 

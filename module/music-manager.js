@@ -201,7 +201,43 @@ export async function updateTurnMusic(combat) {
 		return;
 	}
 
-	// No encounter override — check for Combat Theme tokens first.
+	// No encounter override — check if the current combatant has personal turn music
+	// that should interrupt whatever is playing (Combat Theme or trait music).
+	const combatantToken = combat.combatant?.token ?? null;
+	const turnMusic = combatantToken ? getTokenMusic(combatantToken) : null;
+	if (turnMusic) {
+		const currentMusic = getCurrentMusic(combat);
+		const alreadyInterrupted = combat.getFlag(MODULE_ID, 'encounterInterrupted');
+		if (!alreadyInterrupted && currentMusic) {
+			combat.setFlag(MODULE_ID, 'encounterInterrupted', true);
+			const currentSound = parseMusic(currentMusic);
+			if (!('error' in currentSound)) {
+				if (currentSound.documentName === 'PlaylistSound') pause(currentSound);
+				else currentSound.sounds.contents.filter((s) => s.playing).forEach((s) => pause(s));
+			}
+		}
+		updateCombatMusic(combat, turnMusic, combatantToken.id);
+		return;
+	}
+
+	// If the previous turn had interrupted, stop the turn music and resume the encounter track.
+	const wasInterrupted = combat.getFlag(MODULE_ID, 'encounterInterrupted');
+	if (wasInterrupted) {
+		combat.setFlag(MODULE_ID, 'encounterInterrupted', false);
+		const currentMusic = getCurrentMusic(combat);
+		if (currentMusic) {
+			const currentSound = parseMusic(currentMusic);
+			if (!('error' in currentSound)) {
+				if (currentSound.documentName === 'PlaylistSound') await currentSound.parent.stopSound(currentSound);
+				else await currentSound.stopAll();
+			}
+		}
+		// Resume any paused encounter tracks.
+		combatPaused.forEach((s) => resume(s));
+		combat._combatMusic = '';
+	}
+
+	// Check for Combat Theme tokens first.
 	const themeMap = new Map();
 	for (const combatant of combat.combatants.contents) {
 		if (!combatant.token) continue;

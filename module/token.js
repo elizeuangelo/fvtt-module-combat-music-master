@@ -32,7 +32,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	static PARTS = {
-		body: { template: 'modules/combat-music-master/templates/music-section.hbs' },
+		body: { template: 'modules/david-combat-music-master/templates/music-section.hbs' },
 		footer: { template: 'templates/generic/form-footer.hbs' },
 	};
 

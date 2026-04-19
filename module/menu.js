@@ -19,7 +19,7 @@ class PlaylistManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	static PARTS = {
-		body: { template: 'modules/combat-music-master/templates/config.hbs', scrollable: [''] },
+		body: { template: 'modules/david-combat-music-master/templates/config.hbs', scrollable: [''] },
 		footer: { template: 'templates/generic/form-footer.hbs' },
 	};
 

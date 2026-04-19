@@ -26,6 +26,20 @@ const settings = {
 		default: true,
 		requiresReload: true,
 	},
+	traitRules: {
+		name: 'Trait Music Rules',
+		scope: 'world',
+		config: false,
+		type: Array,
+		default: [],
+	},
+	traitMappings: {
+		name: 'Trait Music Mappings',
+		scope: 'world',
+		config: false,
+		type: String,
+		default: '[]',
+	},
 };
 
 export function getSetting(name) {

@@ -214,11 +214,33 @@ export async function updateTurnMusic(combat) {
 	}
 
 	if (themeMap.size > 0) {
-		// One or more Combat Theme tokens are present — pick the highest priority one as the encounter track,
-		// then let the normal per-turn token music interrupt it as needed.
 		const themeHighest = getHighestPriority(themeMap);
 		const picked = pick(themeHighest);
 		updateCombatMusic(combat, picked.music, '');
+		return;
+	}
+
+	// No Combat Theme — check for trait-based music.
+	const traitMusic = (() => {
+		let mappings = [];
+		try { mappings = JSON.parse(game.settings.get(MODULE_ID, 'traitMappings')) ?? []; } catch { }
+		if (!mappings.length) return null;
+		const hostileTraits = new Set();
+		for (const combatant of combat.combatants.contents) {
+			const actor = combatant.actor;
+			if (!actor || actor.type === 'character') continue;
+			for (const trait of (actor.system?.traits?.value ?? [])) hostileTraits.add(trait.toLowerCase());
+		}
+		if (!hostileTraits.size) return null;
+		let best = null;
+		for (const mapping of mappings) {
+			if (!hostileTraits.has(mapping.trait)) continue;
+			if (!best || mapping.priority > best.priority) best = mapping;
+		}
+		return best?.music ?? null;
+	})();
+	if (traitMusic) {
+		updateCombatMusic(combat, traitMusic, '');
 		return;
 	}
 

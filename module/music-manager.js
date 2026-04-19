@@ -201,7 +201,28 @@ export async function updateTurnMusic(combat) {
 		return;
 	}
 
-	// No encounter override — use the priority system.
+	// No encounter override — check for Combat Theme tokens first.
+	const themeMap = new Map();
+	for (const combatant of combat.combatants.contents) {
+		if (!combatant.token) continue;
+		const token = combatant.token;
+		if (!token.getFlag(MODULE_ID, 'combatTheme')) continue;
+		const music = getTokenMusic(token);
+		if (!music) continue;
+		const priority = token.getFlag(MODULE_ID, 'priority') ?? 10;
+		themeMap.set({ token: token.id, music }, priority);
+	}
+
+	if (themeMap.size > 0) {
+		// One or more Combat Theme tokens are present — pick the highest priority one as the encounter track,
+		// then let the normal per-turn token music interrupt it as needed.
+		const themeHighest = getHighestPriority(themeMap);
+		const picked = pick(themeHighest);
+		updateCombatMusic(combat, picked.music, '');
+		return;
+	}
+
+	// Fall back to the standard priority playlist system.
 	let music = '';
 	let token = '';
 	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));

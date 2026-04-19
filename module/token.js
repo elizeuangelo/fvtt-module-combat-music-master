@@ -50,6 +50,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			priority: token.getFlag(MODULE_ID, 'priority') ?? 10,
 			active: token.getFlag(MODULE_ID, 'active') ?? false,
 			turnOnly: token.getFlag(MODULE_ID, 'turnOnly') ?? false,
+			combatTheme: token.getFlag(MODULE_ID, 'combatTheme') ?? false,
 		};
 	}
 
@@ -57,9 +58,10 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		const active = this.element.querySelector('input[name="music-active"]').checked;
 		const priority = parseInt(this.element.querySelector('input[name="priority"]').value) || 10;
 		const turnOnly = this.element.querySelector('input[name="turn-only"]').checked;
+		const combatTheme = this.element.querySelector('input[name="combat-theme"]').checked;
 		const resource = this.element.querySelector('select[name="tracked-resource"]').value;
 		const musicList = this.#getTrackData();
-		return { musicList, resource, active, priority, turnOnly };
+		return { musicList, resource, active, priority, turnOnly, combatTheme };
 	}
 
 	_previewChanges(data) {
@@ -106,6 +108,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			musicPriority: data.priority,
 			musicActive: data.active,
 			turnOnly: data.turnOnly,
+			combatTheme: data.combatTheme,
 			isDefault: false,
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};

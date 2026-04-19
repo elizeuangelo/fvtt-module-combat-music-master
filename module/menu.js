@@ -78,9 +78,11 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#setupEventListeners() {
-		this.element.addEventListener('click', (ev) => {
-			const action = ev.target.closest('[data-action]')?.dataset.action;
-			if (!action) return;
+		const target = this.element.querySelector('form') ?? this.element;
+		target.addEventListener('click', (ev) => {
+			const actionEl = ev.target.closest('[data-action]');
+			if (!actionEl) return;
+			const action = actionEl.dataset.action;
 			ev.preventDefault();
 			ev.stopPropagation();
 			if (action === 'addRule') {
@@ -88,7 +90,7 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 				this._preview.push({ trait: '', playlistId: '', trackId: '', priority: 10 });
 				this.render(true);
 			} else if (action === 'removeRule') {
-				const index = parseInt(ev.target.closest('fieldset').dataset.index);
+				const index = parseInt(actionEl.closest('fieldset').dataset.index);
 				this._preview = this.#getRuleData();
 				this._preview.splice(index, 1);
 				this.render(true);

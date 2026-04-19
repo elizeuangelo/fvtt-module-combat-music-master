@@ -20,8 +20,12 @@ async function resume(sound) {
 	combatPaused.splice(idx, 1);
 }
 
+function getCurrentMusic(combat) {
+	return combat._combatMusic || combat.getFlag(MODULE_ID, 'currentMusic') || '';
+}
+
 export async function updateCombatMusic(combat, music, token) {
-	const oldMusic = combat._combatMusic;
+	const oldMusic = getCurrentMusic(combat);
 	const oldSound = parseMusic(oldMusic ?? '');
 	const sound = parseMusic(music);
 	if ('error' in sound) {
@@ -82,7 +86,7 @@ function resumePlaylists(combat) {
 		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
 	});
 	combatPaused = [];
-	const sound = parseMusic(combat._combatMusic);
+	const sound = parseMusic(getCurrentMusic(combat));
 	if (!('error' in sound)) {
 		if (sound.documentName === 'Playlist') sound.stopAll();
 		else sound.update({ playing: false, pausedTime: null });
@@ -168,7 +172,7 @@ export async function updateTurnMusic(combat) {
 			if (wasInterrupted) {
 				combat.setFlag(MODULE_ID, 'encounterInterrupted', false);
 				// Stop whatever token music is currently playing.
-				const currentMusic = combat._combatMusic;
+				const currentMusic = getCurrentMusic(combat);
 				if (currentMusic) {
 					const currentSound = parseMusic(currentMusic);
 					if (!('error' in currentSound)) {

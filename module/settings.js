@@ -54,38 +54,44 @@ Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {
 		game.settings.register(MODULE_ID, key, setting);
 	}
+});
 
-	game.settings.registerMenu(MODULE_ID, 'exportMusic', {
-		name: 'Export Music Config',
-		label: 'Export',
-		hint: 'Download a JSON of all combat playlists, their tracks, and trait rules.',
-		icon: 'fas fa-file-export',
-		restricted: true,
-		type: class extends foundry.applications.api.ApplicationV2 {
-			static DEFAULT_OPTIONS = { id: 'cmm-export' };
-			async _renderHTML() {}
-			async _replaceHTML() {
-				const { exportMusicConfig } = await import('./transfer.js');
-				await exportMusicConfig();
-				this.close();
-			}
-		},
+// Inject Export/Import buttons directly into the settings UI after Pause Tracks.
+Hooks.on('renderSettingsConfig', (app, html) => {
+	if (!game.user.isGM) return;
+
+	// Find the Pause Tracks setting row — insert our buttons after it.
+	const pauseTrackLabel = html instanceof HTMLElement
+		? html.querySelector(`[name="${MODULE_ID}.pauseTrack"]`)
+		: html.find(`[name="${MODULE_ID}.pauseTrack"]`)[0];
+	if (!pauseTrackLabel) return;
+
+	const row = pauseTrackLabel.closest('.form-group') ?? pauseTrackLabel.closest('div');
+	if (!row) return;
+
+	const wrapper = document.createElement('div');
+	wrapper.className = 'form-group';
+	wrapper.innerHTML = `
+		<label>Music Config</label>
+		<div class="form-fields" style="gap: 0.5rem;">
+			<button type="button" id="cmm-export-btn" style="flex:1">
+				<i class="fas fa-file-export"></i> Export
+			</button>
+			<button type="button" id="cmm-import-btn" style="flex:1">
+				<i class="fas fa-file-import"></i> Import
+			</button>
+		</div>
+		<p class="hint">Export or import combat playlists and trait rules as a JSON file.</p>
+	`;
+	row.after(wrapper);
+
+	wrapper.querySelector('#cmm-export-btn').addEventListener('click', async () => {
+		const { exportMusicConfig } = await import('./transfer.js');
+		exportMusicConfig();
 	});
 
-	game.settings.registerMenu(MODULE_ID, 'importMusic', {
-		name: 'Import Music Config',
-		label: 'Import',
-		hint: 'Load a previously exported music config JSON into this world.',
-		icon: 'fas fa-file-import',
-		restricted: true,
-		type: class extends foundry.applications.api.ApplicationV2 {
-			static DEFAULT_OPTIONS = { id: 'cmm-import' };
-			async _renderHTML() {}
-			async _replaceHTML() {
-				const { importMusicConfig } = await import('./transfer.js');
-				await importMusicConfig();
-				this.close();
-			}
-		},
+	wrapper.querySelector('#cmm-import-btn').addEventListener('click', async () => {
+		const { importMusicConfig } = await import('./transfer.js');
+		importMusicConfig();
 	});
 });

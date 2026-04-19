@@ -283,13 +283,29 @@ export function getTokenHeaderButtons(sheet, buttons) {
 
 function resourceTracker(actor) {
 	if (!game.combat?.started) return;
-	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
 	const token = actor.token;
-	if (!musicToken || !token || musicToken !== token.id) return;
+	if (!token) return;
 	const combatant = token.combatant;
-	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
+	if (!combatant) return;
+	const combat = combatant.combat;
+
+	// If this token is a Combat Theme token, re-evaluate which theme track should
+	// be playing whenever their resource (e.g. HP) changes — even mid-turn.
+	if (token.getFlag(MODULE_ID, 'combatTheme') && !combat.getFlag(MODULE_ID, 'overrideMusic')) {
+		const music = getTokenMusic(token);
+		if (music) {
+			const currentMusic = combat._combatMusic || combat.getFlag(MODULE_ID, 'currentMusic');
+			if (music !== currentMusic) updateCombatMusic(combat, music, '');
+		}
+		return;
+	}
+
+	// Original behaviour: update music if this token currently owns the combat music.
+	const musicToken = combat.getFlag(MODULE_ID, 'token');
+	if (!musicToken || musicToken !== token.id) return;
+	if (combat.getFlag(MODULE_ID, 'token') !== token.id) return;
 	const music = getTokenMusic(token);
-	if (music) updateCombatMusic(combatant.combat, music);
+	if (music) updateCombatMusic(combat, music);
 }
 
 export function getTokenMusic(token) {

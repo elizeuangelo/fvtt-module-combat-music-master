@@ -12,7 +12,8 @@ let combatPaused = [];
 async function pause(sound) {
 	if (combatPaused.includes(sound)) return;
 	combatPaused.push(sound);
-	await sound.update({ playing: false, pausedTime: sound.sound.currentTime });
+	const currentTime = sound.sound?.currentTime ?? null;
+	await sound.update({ playing: false, pausedTime: currentTime });
 }
 
 async function resume(sound) {

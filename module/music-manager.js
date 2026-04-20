@@ -172,7 +172,9 @@ export function getCombatMusic() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
-export async function updateTurnMusic(combat) {
+export async function updateTurnMusic(combat, changes) {
+	// Only re-evaluate when the turn or round has actually advanced, or on combat start.
+	if (changes && !('turn' in changes) && !('round' in changes)) return;
 	if (!combat.started || getCombatMusic().length === 0) return;
 	const overrideMusic = combat.getFlag(MODULE_ID, 'overrideMusic');
 

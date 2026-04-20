@@ -1,10 +1,19 @@
 import { getSetting, MODULE_ID } from './settings.js';
 import { getTokenMusic } from './token.js';
 
-function playCombatMusic(combat) {
+async function playCombatMusic(combat) {
 	if (getCombatMusic().length === 0) return;
 	if (getSetting('pauseAmbience')) pauseAllMusic();
-	updateTurnMusic(combat);
+	await updateTurnMusic(combat);
+	// Remove any combat music that got caught in the ambience pause.
+	const currentMusic = getCurrentMusic(combat);
+	if (currentMusic) {
+		const sound = parseMusic(currentMusic);
+		const combatSounds = sound.documentName === 'PlaylistSound'
+			? [sound]
+			: (sound.sounds?.contents ?? []);
+		paused = paused.filter((s) => !combatSounds.includes(s));
+	}
 }
 
 let combatPaused = [];

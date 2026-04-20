@@ -1,0 +1,42 @@
+<div class="tab flexcol">
+	<p>Map PF2e traits to tracks. When hostiles with matching traits are in combat, the highest-priority matching track plays as the default encounter music.</p>
+
+	<div class="trait-rules">
+		<header class="trait-rule">
+			<div class="trait-rule-trait">Trait</div>
+			<div class="trait-rule-playlist">Playlist</div>
+			<div class="trait-rule-track">Track</div>
+			<div class="trait-rule-priority">Priority</div>
+			<div class="trait-rule-controls">
+				<a class="action-button" data-action="addRule" data-tooltip="Add Rule">
+					<i class="fa-solid fa-plus"></i>
+				</a>
+			</div>
+		</header>
+		{{#each rules}}
+		<fieldset class="trait-rule" data-index="{{@index}}">
+			<div>
+				<input type="text" name="trait" value="{{this.trait}}" placeholder="e.g. undead" />
+			</div>
+			<div>
+				<select name="playlist">
+					<option value=""></option>
+				</select>
+			</div>
+			<div>
+				<select name="track">
+					<option value=""></option>
+				</select>
+			</div>
+			<div>
+				<input type="number" name="priority" value="{{this.priority}}" placeholder="10" min="1" />
+			</div>
+			<div class="trait-rule-controls">
+				<a class="action-button" data-action="removeRule" data-tooltip="Remove Rule">
+					<i class="fa-solid fa-times"></i>
+				</a>
+			</div>
+		</fieldset>
+		{{/each}}
+	</div>
+</div>

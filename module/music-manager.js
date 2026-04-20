@@ -236,6 +236,7 @@ export async function updateTurnMusic(combat) {
 		for (const s of combatPaused.filter(s => pausedIds.includes(s.id))) await resume(s);
 		await combat.unsetFlag(MODULE_ID, 'pausedSounds');
 		combat._combatMusic = '';
+		return;
 	}
 
 	// Check for Combat Theme tokens first.

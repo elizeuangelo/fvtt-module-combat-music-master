@@ -1,9 +1,10 @@
 import { getSetting, MODULE_ID } from './settings.js';
 import { getTokenMusic } from './token.js';
 
-function playCombatMusic() {
+function playCombatMusic(combat) {
 	if (getCombatMusic().length === 0) return;
 	if (getSetting('pauseAmbience')) pauseAllMusic();
+	updateTurnMusic(combat);
 }
 
 let combatPaused = [];

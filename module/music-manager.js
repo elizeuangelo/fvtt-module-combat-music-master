@@ -5,15 +5,6 @@ async function playCombatMusic(combat) {
 	if (getCombatMusic().length === 0) return;
 	if (getSetting('pauseAmbience')) pauseAllMusic();
 	await updateTurnMusic(combat);
-	// Remove any combat music that got caught in the ambience pause.
-	const currentMusic = getCurrentMusic(combat);
-	if (currentMusic) {
-		const sound = parseMusic(currentMusic);
-		const combatSounds = sound.documentName === 'PlaylistSound'
-			? [sound]
-			: (sound.sounds?.contents ?? []);
-		paused = paused.filter((s) => !combatSounds.includes(s));
-	}
 }
 
 let combatPaused = [];
@@ -117,7 +108,11 @@ export function pick(array) {
 let paused = [];
 
 function pauseAllMusic() {
-	paused = game.playlists.playing.map((p) => p.sounds.contents.filter((p) => p.playing)).flat();
+	const combatPlaylistIds = new Set(getCombatMusic().map((p) => p.id));
+	paused = game.playlists.playing
+		.filter((p) => !combatPlaylistIds.has(p.id))
+		.map((p) => p.sounds.contents.filter((s) => s.playing))
+		.flat();
 	for (const sound of paused) sound.update({ playing: false, pausedTime: sound.sound.currentTime });
 }
 

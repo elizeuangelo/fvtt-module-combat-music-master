@@ -1,5 +1,5 @@
-import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { MODULE_ID } from './settings.js';
+import { explainCombatMusicDecision, parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
+import { getSetting, MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -102,6 +102,44 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 	}
 }
 
+class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
+	static DEFAULT_OPTIONS = {
+		id: 'combat-master-inspector',
+		tag: 'section',
+		window: {
+			contentClasses: ['standard-form', 'cmm-inspector'],
+			icon: 'fa-solid fa-waveform-lines',
+			title: 'Combat Music Inspector',
+		},
+		position: { width: 520, height: 'auto' },
+	};
+
+	static PARTS = {
+		body: { template: 'modules/combat-music-master/templates/inspector.hbs', scrollable: [''] },
+	};
+
+	_prepareContext() {
+		const decision = explainCombatMusicDecision(game.combat);
+		const winner = parseMusic(decision.winner ?? '');
+		const winnerLabel =
+			'error' in winner || !decision.winner
+				? decision.winner || '(none)'
+				: winner.documentName === 'PlaylistSound'
+				? `${winner.parent.name} / ${winner.name}`
+				: winner.name;
+		return {
+			...decision,
+			winnerLabel,
+			candidates: (decision.candidates ?? []).map((c) => {
+				const parsed = c.parsed;
+				if ('error' in parsed) return { ...c, label: `${c.music} (${parsed.error})` };
+				const label = parsed.documentName === 'PlaylistSound' ? `${parsed.parent.name} / ${parsed.name}` : parsed.name;
+				return { ...c, label };
+			}),
+		};
+	}
+}
+
 Hooks.on('getCombatContextOptions', addButtonToContextMenu);
 function addButtonToContextMenu(_combatTracker, options) {
 	options.unshift({
@@ -112,4 +150,14 @@ function addButtonToContextMenu(_combatTracker, options) {
 			new CombatTrackerMusicManager().render(true);
 		},
 	});
+	if (getSetting('enableInspector')) {
+		options.unshift({
+			name: 'Inspect Combat Music Decision',
+			icon: '<i class="fas fa-waveform-lines"></i>',
+			condition: () => game.user.isGM,
+			callback: () => {
+				new CombatMusicInspector().render(true);
+			},
+		});
+	}
 }

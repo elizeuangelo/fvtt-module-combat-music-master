@@ -47,10 +47,10 @@ export async function updateCombatMusic(combat, music, token) {
 	setCombatMusic(sound, combat, token);
 }
 
-function createPriorityList(tokenId) {
+function createPriorityList(combat, tokenId) {
 	const base = getSetting('defaultPlaylist');
 	const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
-	for (const combatant of game.combat.combatants.contents) {
+	for (const combatant of combat.combatants.contents) {
 		if (!combatant.token) continue;
 		const music = getTokenMusic(combatant.token),
 			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? 10,
@@ -135,7 +135,7 @@ export function updateTurnMusic(combat) {
 	let music = combat.getFlag(MODULE_ID, 'overrideMusic');
 	let token = '';
 	if (!music) {
-		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));
+		const highestPriority = getHighestPriority(createPriorityList(combat, combat.combatant?.tokenId));
 		const musicFound = highestPriority.find((p) => p.music === music);
 		if (!musicFound) {
 			const sorted = pick(highestPriority);
@@ -144,6 +144,49 @@ export function updateTurnMusic(combat) {
 		}
 	}
 	if (music) updateCombatMusic(combat, music, token);
+}
+
+export function explainCombatMusicDecision(combat = game.combat) {
+	if (!combat?.started) {
+		return {
+			started: false,
+			reason: 'Combat is not started.',
+			overrideMusic: '',
+			winner: '',
+			candidates: [],
+		};
+	}
+
+	const overrideMusic = combat.getFlag(MODULE_ID, 'overrideMusic') ?? '';
+	const candidatesMap = createPriorityList(combat, combat.combatant?.tokenId);
+	const candidates = [...candidatesMap.entries()].map(([choice, priority]) => ({
+		token: choice.token,
+		music: choice.music,
+		priority,
+		parsed: parseMusic(choice.music),
+	}));
+
+	if (overrideMusic) {
+		const parsedOverride = parseMusic(overrideMusic);
+		return {
+			started: true,
+			reason: 'Encounter override is active.',
+			overrideMusic,
+			overrideParsed: parsedOverride,
+			winner: overrideMusic,
+			candidates,
+		};
+	}
+
+	const highestPriority = getHighestPriority(candidatesMap);
+	const winner = highestPriority.length ? pick(highestPriority).music : '';
+	return {
+		started: true,
+		reason: 'Winner chosen from highest-priority candidates.',
+		overrideMusic: '',
+		winner,
+		candidates,
+	};
 }
 
 window.CombatMusicMaster = {

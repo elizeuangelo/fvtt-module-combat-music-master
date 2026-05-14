@@ -26,6 +26,14 @@ const settings = {
 		default: true,
 		requiresReload: true,
 	},
+	enableInspector: {
+		name: 'Enable Combat Music Inspector',
+		hint: 'Show the Combat Music Inspector context action in the Combat Tracker. Intended for power-user diagnostics.',
+		scope: 'world',
+		config: true,
+		type: Boolean,
+		default: false,
+	},
 };
 
 export function getSetting(name) {

@@ -152,9 +152,7 @@ export function getCombatMusic() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
-export function updateTurnMusic(combat, changes) {
-	// Only re-evaluate when the turn or round has actually advanced, or on combat start.
-	if (changes && !('turn' in changes) && !('round' in changes)) return;
+export function refreshTurnMusic(combat = game.combat) {
 	if (!combat.started || getCombatMusic().length === 0) return;
 	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId, combat));
 	if (highestPriority.length === 0) return;
@@ -170,7 +168,13 @@ window.CombatMusicMaster = {
 Hooks.once('setup', () => {
 	if (game.user.isGM) {
 		Hooks.on('combatStart', pauseAmbienceMusic);
-		Hooks.on('updateCombat', updateTurnMusic);
 		Hooks.on('preDeleteCombat', resumeAmbienceMusic);
+		Hooks.on('combatTurnChange', refreshTurnMusic);
+		Hooks.on('deleteCombatant', (combatant) => refreshTurnMusic(combatant.combat));
+		Hooks.on('createCombatant', (combatant) => refreshTurnMusic(combatant.combat));
+		Hooks.on('updateToken', (token) => {
+			if (!game.combat || token.combatant?.combat !== game.combat) return;
+			refreshTurnMusic();
+		});
 	}
 });

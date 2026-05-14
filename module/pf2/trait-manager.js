@@ -1,5 +1,5 @@
 import { MODULE_ID } from '../constants.js';
-import { getCombatMusic, stringifyMusic } from '../music-manager.js';
+import { getCombatMusic, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
 import { getSetting, setSetting } from '../settings.js';
 
 const DEFAULT_TRAIT_MUSIC_PRIORITY = 15;
@@ -131,6 +131,11 @@ Hooks.once('setup', () => {
 		type: TraitMusicManager,
 		restricted: true,
 	});
+});
+
+Hooks.on('updateSetting', (setting) => {
+	if (setting.key !== 'combat-music-master.traitRules') return;
+	refreshTurnMusic();
 });
 
 // Custom playlist hook

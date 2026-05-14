@@ -1,5 +1,5 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
-import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
+import { parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
 import { createOption } from './token.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -108,7 +108,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 				},
 			})
 			.then(() => {
-				if (game.combat.started) updateTurnMusic(game.combat);
+				if (game.combat.started) refreshTurnMusic(game.combat);
 			});
 	}
 }

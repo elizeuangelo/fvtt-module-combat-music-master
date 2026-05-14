@@ -20,10 +20,36 @@ async function resume(sound) {
 	combatPaused.splice(idx, 1);
 }
 
+function isDocumentFound(result) {
+	return !!result && !('error' in result);
+}
+
+function getDefaultFallbackMusic() {
+	const combatPlaylists = getCombatMusic();
+	if (combatPlaylists.length === 0) return '';
+	const preferredId = getSetting('defaultPlaylist');
+	const preferred = combatPlaylists.find((p) => p.id === preferredId);
+	return stringifyMusic(preferred ?? combatPlaylists[0]);
+}
+
+async function clearOverrideMusic(combat) {
+	if (!combat) return;
+	await combat.update({ [`flags.${MODULE_ID}.overrideMusic`]: '' });
+}
+
 export async function updateCombatMusic(combat, music, token) {
 	const oldMusic = combat._combatMusic;
 	const oldSound = parseMusic(oldMusic ?? '');
-	const sound = parseMusic(music);
+	let nextSound = parseMusic(music);
+	if (!isDocumentFound(nextSound)) {
+		const fallback = getDefaultFallbackMusic();
+		if (music !== fallback) {
+			music = fallback;
+			nextSound = parseMusic(music);
+		}
+		if (!isDocumentFound(nextSound)) return;
+	}
+	const sound = nextSound;
 	if ('error' in sound) {
 		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
 		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
@@ -47,10 +73,10 @@ export async function updateCombatMusic(combat, music, token) {
 	setCombatMusic(sound, combat, token);
 }
 
-function createPriorityList(tokenId) {
+function createPriorityList(combat, tokenId) {
 	const base = getSetting('defaultPlaylist');
 	const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
-	for (const combatant of game.combat.combatants.contents) {
+	for (const combatant of combat.combatants.contents) {
 		if (!combatant.token) continue;
 		const music = getTokenMusic(combatant.token),
 			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? 10,
@@ -134,13 +160,22 @@ export function updateTurnMusic(combat) {
 	if (!combat.started || getCombatMusic().length === 0) return;
 	let music = combat.getFlag(MODULE_ID, 'overrideMusic');
 	let token = '';
+	const hasOverride = !!music;
+	if (hasOverride) {
+		const parsed = parseMusic(music);
+		if (!isDocumentFound(parsed)) {
+			clearOverrideMusic(combat);
+			music = '';
+		}
+	}
 	if (!music) {
-		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));
-		const musicFound = highestPriority.find((p) => p.music === music);
-		if (!musicFound) {
+		const highestPriority = getHighestPriority(createPriorityList(combat, combat.combatant?.tokenId));
+		if (highestPriority.length > 0) {
 			const sorted = pick(highestPriority);
 			token = sorted.token;
 			music = sorted.music;
+		} else {
+			music = getDefaultFallbackMusic();
 		}
 	}
 	if (music) updateCombatMusic(combat, music, token);

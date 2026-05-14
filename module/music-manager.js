@@ -58,8 +58,8 @@ export async function updateCombatMusic(combat, music, token) {
 	const oldSound = parseMusic(oldMusic ?? '');
 	const sound = parseMusic(music);
 	if ('error' in sound) {
-		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
-		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
+		if (sound.error === 'empty') return;
+		notifyParseError(sound);
 		return;
 	}
 	if (oldMusic !== music) {
@@ -121,11 +121,33 @@ export function pick(array) {
 }
 
 export function parseMusic(flag) {
-	const rgx = /(\w+)\.?(\w+)?/.exec(flag);
-	if (!rgx) return { error: 'invalid flag' };
-	const playlist = game.playlists.get(rgx[1]),
-		sound = playlist?.sounds.get(rgx[2]);
-	return sound ?? playlist ?? { error: 'not found', rgx };
+	if (!flag) return { error: 'empty', flag };
+	const match = /^([A-Za-z0-9_-]+)(?:\\.([A-Za-z0-9_-]+))?$/.exec(flag.trim());
+	if (!match) return { error: 'invalid flag', flag };
+	const [, playlistId, trackId] = match;
+	const playlist = game.playlists.get(playlistId);
+	if (!playlist) return { error: 'missing playlist', flag, playlistId, trackId };
+	if (!trackId) return playlist;
+	const sound = playlist.sounds.get(trackId);
+	return sound ?? { error: 'missing track', flag, playlistId, trackId };
+}
+
+export function notifyParseError(parsed) {
+	if (!parsed || !('error' in parsed)) return;
+	switch (parsed.error) {
+		case 'empty': break; // No music configured — not an error, just nothing to do.
+		case 'invalid flag':
+			ui.notifications.error(`Combat Music Master: Invalid music reference \"${parsed.flag}\".`);
+			break;
+		case 'missing playlist':
+			ui.notifications.error(`Combat Music Master: Playlist \"${parsed.playlistId}\" not found.`);
+			break;
+		case 'missing track':
+			ui.notifications.error(
+				`Combat Music Master: Track \"${parsed.trackId}\" not found in playlist \"${parsed.playlistId}\".`
+			);
+			break;
+	}
 }
 
 export function stringifyMusic(sound) {

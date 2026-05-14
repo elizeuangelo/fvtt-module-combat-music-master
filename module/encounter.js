@@ -53,7 +53,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		const playlists = game.playlists.contents
 			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
 			.map((p) => ({ value: p.id, label: p.name }));
-		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
+		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music'));
 		const playlist = 'error' in selected ? undefined : (selected?.parent ?? selected);
 		const track = playlist === selected ? undefined : 'error' in selected ? undefined : selected;
 		const tracks = playlist ? playlist.sounds.contents.map((s) => ({ value: s.id, label: s.name })) : [];
@@ -103,7 +103,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		game.combat
 			?.update({
 				[`flags.${MODULE_ID}`]: {
-					overrideMusic: sound,
+					music: sound,
 					priority,
 				},
 			})

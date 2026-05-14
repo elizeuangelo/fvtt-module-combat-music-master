@@ -86,7 +86,7 @@ function createPriorityList(tokenId, combat = game.combat) {
 	const priorityList = new Map(getCombatMusic().map((p) => [{ source: 'settings', music: p.id }, +(p.id === base)]));
 
 	// Combat music priority
-	const combatMusic = combat.getFlag(MODULE_ID, 'overrideMusic');
+	const combatMusic = combat.getFlag(MODULE_ID, 'music');
 	if (combatMusic) {
 		const combatPriority = combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
 		priorityList.set({ source: 'encounter', music: combatMusic }, combatPriority);

@@ -9,6 +9,7 @@ import {
 	updateCombatMusic,
 } from './music-manager.js';
 import { getSetting } from './settings.js';
+import { debounce } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -279,17 +280,6 @@ export function getTokenHeaderButtons(sheet, buttons) {
 	}
 }
 
-function resourceTracker(actor) {
-	if (!game.combat?.started) return;
-	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
-	const token = actor.token;
-	if (!musicToken || !token || musicToken !== token.id) return;
-	const combatant = token.combatant;
-	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
-	const music = getTokenMusic(token);
-	if (music) updateCombatMusic(combatant.combat, music);
-}
-
 export function getTokenMusic(token) {
 	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
@@ -316,10 +306,23 @@ export function getTokenMusic(token) {
 	}
 }
 
+function resourceTracker(actor) {
+	if (!game.combat?.started) return;
+	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
+	const token = actor.token;
+	if (!musicToken || !token || musicToken !== token.id) return;
+	const combatant = token.combatant;
+	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
+	const music = getTokenMusic(token);
+	if (music) updateCombatMusic(combatant.combat, music);
+}
+
+const debouncedResourceTracker = debounce(resourceTracker);
+
 Hooks.once('setup', () => {
 	if (game.user.isGM) {
-		Hooks.on('updateActor', resourceTracker);
-		Hooks.on('updateToken', (token) => resourceTracker(token.actor));
+		Hooks.on('updateActor', debouncedResourceTracker);
+		Hooks.on('updateToken', (token) => debouncedResourceTracker(token.actor));
 	}
 });
 Hooks.on('getHeaderControlsTokenApplication', getTokenHeaderButtons);

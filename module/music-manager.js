@@ -1,6 +1,7 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import { getSetting, setSetting } from './settings.js';
 import { getTokenMusic } from './token.js';
+import { debounce } from './utils.js';
 
 function pauseAmbienceMusic() {
 	if (getCombatMusic().length === 0) return;
@@ -39,13 +40,13 @@ function resumeAmbienceMusic(combat) {
 	setSetting('pausedAmbienceSounds', []);
 }
 
-async function pause(sound) {
+function pause(sound) {
 	const currentTime = sound.sound?.currentTime ?? null;
-	await sound.update({ playing: false, pausedTime: currentTime });
+	return sound.update({ playing: false, pausedTime: currentTime });
 }
 
-async function resume(sound) {
-	await sound.update({ playing: true });
+function resume(sound) {
+	return sound.update({ playing: true });
 }
 
 function getCurrentMusic(combat) {
@@ -71,14 +72,14 @@ export async function updateCombatMusic(combat, music, token) {
 		}
 	}
 	if (sound.playing === false) {
-		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
+		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') await resume(sound);
 		else {
 			if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
 			else sound.playAll();
 		}
 	}
 	combat._combatMusic = music;
-	setCombatMusic(sound, combat, token);
+	return setCombatMusic(sound, combat, token);
 }
 
 function createPriorityList(tokenId, combat = game.combat) {
@@ -132,14 +133,12 @@ export function stringifyMusic(sound) {
 }
 
 export function setCombatMusic(sound, combat = game.combat, source) {
-	if (combat) {
-		combat.update({
-			[`flags.${MODULE_ID}`]: {
-				currentMusic: stringifyMusic(sound),
-				source,
-			},
-		});
-	}
+	return combat?.update({
+		[`flags.${MODULE_ID}`]: {
+			currentMusic: stringifyMusic(sound),
+			source,
+		},
+	});
 }
 
 export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
@@ -162,8 +161,10 @@ export function refreshTurnMusic(combat = game.combat) {
 	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
 	if (highestPriority.length === 0) return;
 	const sorted = pick(highestPriority);
-	updateCombatMusic(combat, sorted.music, sorted.token);
+	return updateCombatMusic(combat, sorted.music, sorted.token);
 }
+
+const debouncedRefreshTurnMusic = debounce(refreshTurnMusic);
 
 window.CombatMusicMaster = {
 	setCombatMusic,
@@ -174,12 +175,12 @@ Hooks.once('setup', () => {
 	if (game.user.isGM) {
 		Hooks.on('combatStart', pauseAmbienceMusic);
 		Hooks.on('preDeleteCombat', resumeAmbienceMusic);
-		Hooks.on('combatTurnChange', refreshTurnMusic);
-		Hooks.on('deleteCombatant', (combatant) => refreshTurnMusic(combatant.combat));
-		Hooks.on('createCombatant', (combatant) => refreshTurnMusic(combatant.combat));
+		Hooks.on('combatTurnChange', debouncedRefreshTurnMusic);
+		Hooks.on('deleteCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
+		Hooks.on('createCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
 		Hooks.on('updateToken', (token) => {
 			if (!game.combat || token.combatant?.combat !== game.combat) return;
-			refreshTurnMusic();
+			debouncedRefreshTurnMusic();
 		});
 	}
 });

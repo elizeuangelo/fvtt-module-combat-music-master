@@ -34,13 +34,6 @@ const settings = {
 		type: Array,
 		default: [],
 	},
-	traitMappings: {
-		name: 'Trait Music Mappings',
-		scope: 'world',
-		config: false,
-		type: String,
-		default: '[]',
-	},
 };
 
 export function getSetting(name) {
@@ -58,13 +51,14 @@ Hooks.once('setup', () => {
 });
 
 // Inject Export/Import buttons directly into the settings UI after Pause Tracks.
-Hooks.on('renderSettingsConfig', (app, html) => {
+Hooks.on('renderSettingsConfig', (_app, html) => {
 	if (!game.user.isGM) return;
 
 	// Find the Pause Tracks setting row — insert our buttons after it.
-	const pauseTrackLabel = html instanceof HTMLElement
-		? html.querySelector(`[name="${MODULE_ID}.pauseTrack"]`)
-		: html.find(`[name="${MODULE_ID}.pauseTrack"]`)[0];
+	const pauseTrackLabel =
+		html instanceof HTMLElement
+			? html.querySelector(`[name="${MODULE_ID}.pauseTrack"]`)
+			: html.find(`[name="${MODULE_ID}.pauseTrack"]`)[0];
 	if (!pauseTrackLabel) return;
 
 	const row = pauseTrackLabel.closest('.form-group') ?? pauseTrackLabel.closest('div');

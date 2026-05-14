@@ -5,6 +5,6 @@ import('./module/encounter.js');
 
 Hooks.on('init', () => {
 	if (game.system.id === 'pf2e') {
-		import('./module/pf2/trait-manager.js');
+		import('./module/pf2/index.js');
 	}
 });

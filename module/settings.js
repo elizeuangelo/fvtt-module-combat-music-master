@@ -1,4 +1,4 @@
-export const MODULE_ID = 'combat-music-master';
+import { MODULE_ID } from './constants.js';
 import { exportMusicConfig, importMusicConfig } from './transfer.js';
 
 const settings = {
@@ -18,6 +18,12 @@ const settings = {
 		type: Boolean,
 		default: true,
 	},
+	pausedAmbienceSounds: {
+		scope: 'world',
+		config: false,
+		type: Array,
+		default: [],
+	},
 	pauseTrack: {
 		name: 'Pause Tracks',
 		hint: 'When switching tracks, pause old tracks instead of stopping them, unless they are a playlist.',
@@ -26,13 +32,6 @@ const settings = {
 		type: Boolean,
 		default: true,
 		requiresReload: true,
-	},
-	traitRules: {
-		name: 'Trait Music Rules',
-		scope: 'world',
-		config: false,
-		type: Array,
-		default: [],
 	},
 };
 

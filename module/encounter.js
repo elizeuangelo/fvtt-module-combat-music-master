@@ -1,8 +1,6 @@
+import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { MODULE_ID } from './settings.js';
 import { createOption } from './token.js';
-
-const DEFAULT_ENCOUNTER_MUSIC_PRIORITY = 5;
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

@@ -1,5 +1,6 @@
+import { MODULE_ID } from './constants.js';
 import { parseMusic } from './music-manager.js';
-import { MODULE_ID, getSetting, setSetting } from './settings.js';
+import { getSetting, setSetting } from './settings.js';
 
 /* -------------------------------------------- */
 /*  Export                                      */

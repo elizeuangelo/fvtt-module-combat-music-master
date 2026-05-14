@@ -1,4 +1,5 @@
-import { getSetting, MODULE_ID, setSetting } from './settings.js';
+import { MODULE_ID } from './constants.js';
+import { getSetting, setSetting } from './settings.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

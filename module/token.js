@@ -1,4 +1,5 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
 	getCombatMusic,
 	getHighestPriority,
@@ -7,9 +8,7 @@ import {
 	stringifyMusic,
 	updateCombatMusic,
 } from './music-manager.js';
-import { MODULE_ID, getSetting } from './settings.js';
-
-const DEFAULT_TOKEN_MUSIC_PRIORITY = 10;
+import { getSetting } from './settings.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

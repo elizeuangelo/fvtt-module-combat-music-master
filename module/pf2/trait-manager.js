@@ -1,5 +1,6 @@
+import { MODULE_ID } from '../constants.js';
 import { getCombatMusic, stringifyMusic } from '../music-manager.js';
-import { getSetting, MODULE_ID, setSetting } from '../settings.js';
+import { getSetting, setSetting } from '../settings.js';
 
 const DEFAULT_TRAIT_MUSIC_PRIORITY = 15;
 
@@ -130,4 +131,23 @@ Hooks.once('setup', () => {
 		type: TraitMusicManager,
 		restricted: true,
 	});
+});
+
+// Custom playlist hook
+Hooks.on('updateCMMPriorityList', (playlists, combat) => {
+	const traitRules = getSetting('traitRules') ?? [];
+	if (traitRules.length === 0) return;
+	const hostileTraits = new Set();
+	for (const combatant of combat.combatants.contents) {
+		if (!combatant.token?.actor) continue;
+		if (combatant.token.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) continue;
+		for (const trait of combatant.token.actor.system?.traits?.value ?? []) hostileTraits.add(trait.toLowerCase());
+	}
+	if (hostileTraits.size > 0) {
+		traitRules
+			.filter((r) => r.trait && hostileTraits.has(r.trait.toLowerCase()) && r.music)
+			.forEach((rules) => {
+				playlists.set({ source: `trait:${rules.trait}`, music: rules.music }, rules.priority);
+			});
+	}
 });

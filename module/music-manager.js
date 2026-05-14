@@ -7,44 +7,54 @@ function playCombatMusic() {
 }
 
 let combatPaused = [];
+let transitionQueue = Promise.resolve();
+
+function queueTransition(task) {
+	transitionQueue = transitionQueue
+		.then(() => task())
+		.catch((error) => console.error('Combat Music Master | Transition queue error:', error));
+	return transitionQueue;
+}
 
 async function pause(sound) {
 	combatPaused.push(sound);
-	sound.update({ playing: false, pausedTime: sound.sound.currentTime });
+	await sound.update({ playing: false, pausedTime: sound.sound.currentTime });
 }
 
 async function resume(sound) {
-	sound.update({ playing: true });
+	await sound.update({ playing: true });
 	const idx = combatPaused.indexOf(sound);
 	if (idx === -1) return;
 	combatPaused.splice(idx, 1);
 }
 
 export async function updateCombatMusic(combat, music, token) {
-	const oldMusic = combat._combatMusic;
-	const oldSound = parseMusic(oldMusic ?? '');
-	const sound = parseMusic(music);
-	if ('error' in sound) {
-		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
-		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
-		return;
-	}
-	if (oldMusic !== music) {
-		if (!('error' in oldSound)) {
-			if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
+	return queueTransition(async () => {
+		const oldMusic = combat._combatMusic;
+		const oldSound = parseMusic(oldMusic ?? '');
+		const sound = parseMusic(music);
+		if ('error' in sound) {
+			if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
+			if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
+			return;
+		}
+		if (oldMusic !== music) {
+			if (!('error' in oldSound)) {
+				if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
+				else {
+					if (oldSound.documentName === 'PlaylistSound') await oldSound.parent.stopSound(oldSound);
+					else await oldSound.stopAll();
+				}
+			}
+			if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') await resume(sound);
 			else {
-				if (oldSound.documentName === 'PlaylistSound') await oldSound.parent.stopSound(oldSound);
-				else await oldSound.stopAll();
+				if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
+				else sound.playAll();
 			}
 		}
-		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
-		else {
-			if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
-			else sound.playAll();
-		}
-	}
-	combat._combatMusic = music;
-	setCombatMusic(sound, combat, token);
+		combat._combatMusic = music;
+		setCombatMusic(sound, combat, token);
+	});
 }
 
 function createPriorityList(tokenId) {
@@ -106,7 +116,7 @@ export function stringifyMusic(sound) {
 
 export function setCombatMusic(sound, combat = game.combat, token) {
 	if (combat) {
-		combat.update({
+		return combat.update({
 			[`flags.${MODULE_ID}`]: {
 				currentMusic: stringifyMusic(sound),
 				token,

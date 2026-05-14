@@ -5,3 +5,5 @@ declare var ui: any;
 declare var CONST: any;
 declare var saveDataToFile: any;
 declare var Playlist: any;
+declare var CombatMusicMaster: any;
+declare var CONFIG: any;

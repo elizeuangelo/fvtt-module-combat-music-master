@@ -1,14 +1,15 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
 import {
-	parseMusic,
-	updateCombatMusic,
-	setTokenConfig,
-	stringifyMusic,
 	getCombatMusic,
 	getHighestPriority,
+	parseMusic,
 	pick,
+	stringifyMusic,
+	updateCombatMusic,
 } from './music-manager.js';
 import { MODULE_ID, getSetting } from './settings.js';
+
+const DEFAULT_TOKEN_MUSIC_PRIORITY = 10;
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -47,21 +48,20 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		return {
 			musicList: token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]],
 			resource: token.getFlag(MODULE_ID, 'resource'),
-			priority: token.getFlag(MODULE_ID, 'priority') ?? 10,
+			priority: token.getFlag(MODULE_ID, 'priority') ?? DEFAULT_TOKEN_MUSIC_PRIORITY,
 			active: token.getFlag(MODULE_ID, 'active') ?? false,
 			turnOnly: token.getFlag(MODULE_ID, 'turnOnly') ?? false,
-			combatTheme: token.getFlag(MODULE_ID, 'combatTheme') ?? false,
 		};
 	}
 
 	_prepareSubmitData() {
 		const active = this.element.querySelector('input[name="music-active"]').checked;
-		const priority = parseInt(this.element.querySelector('input[name="priority"]').value) || 10;
+		const priority =
+			parseInt(this.element.querySelector('input[name="priority"]').value) || DEFAULT_TOKEN_MUSIC_PRIORITY;
 		const turnOnly = this.element.querySelector('input[name="turn-only"]').checked;
-		const combatTheme = this.element.querySelector('input[name="combat-theme"]').checked;
 		const resource = this.element.querySelector('select[name="tracked-resource"]').value;
 		const musicList = this.#getTrackData();
-		return { musicList, resource, active, priority, turnOnly, combatTheme };
+		return { musicList, resource, active, priority, turnOnly };
 	}
 
 	_previewChanges(data) {
@@ -76,12 +76,12 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		const trackedResource = resource
 			? token.getBarAttribute?.('tracked-resource', {
 					alternative: resource,
-			  })
+				})
 			: token.getBarAttribute('bar1');
 
 		const trackSelection = musicList.map((music, index) => {
 			const parsed = parseMusic(music[0]);
-			const playlist = 'error' in parsed ? undefined : parsed?.parent ?? parsed;
+			const playlist = 'error' in parsed ? undefined : (parsed?.parent ?? parsed);
 			const track = playlist === parsed ? undefined : 'error' in parsed ? undefined : parsed;
 			return {
 				threshold: music[1],
@@ -108,7 +108,6 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			musicPriority: data.priority,
 			musicActive: data.active,
 			turnOnly: data.turnOnly,
-			combatTheme: data.combatTheme,
 			isDefault: false,
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
@@ -197,7 +196,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/**
 	 * Handle changing the attribute bar in the drop-down selector to update the default current and max value
-	 * @param {Event} event  The select input change event
+	 * @param {Event & { target: HTMLInputElement }} event  The select input change event
 	 */
 	#onChangeBar(event) {
 		const form = this.form;
@@ -283,29 +282,13 @@ export function getTokenHeaderButtons(sheet, buttons) {
 
 function resourceTracker(actor) {
 	if (!game.combat?.started) return;
+	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
 	const token = actor.token;
-	if (!token) return;
+	if (!musicToken || !token || musicToken !== token.id) return;
 	const combatant = token.combatant;
-	if (!combatant) return;
-	const combat = combatant.combat;
-
-	// If this token is a Combat Theme token, re-evaluate which theme track should
-	// be playing whenever their resource (e.g. HP) changes — even mid-turn.
-	if (token.getFlag(MODULE_ID, 'combatTheme') && !combat.getFlag(MODULE_ID, 'overrideMusic')) {
-		const music = getTokenMusic(token);
-		if (music) {
-			const currentMusic = combat._combatMusic || combat.getFlag(MODULE_ID, 'currentMusic');
-			if (music !== currentMusic) updateCombatMusic(combat, music, '');
-		}
-		return;
-	}
-
-	// Original behaviour: update music if this token currently owns the combat music.
-	const musicToken = combat.getFlag(MODULE_ID, 'token');
-	if (!musicToken || musicToken !== token.id) return;
-	if (combat.getFlag(MODULE_ID, 'token') !== token.id) return;
+	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
 	const music = getTokenMusic(token);
-	if (music) updateCombatMusic(combat, music);
+	if (music) updateCombatMusic(combatant.combat, music);
 }
 
 export function getTokenMusic(token) {
@@ -325,7 +308,7 @@ export function getTokenMusic(token) {
 			if (music === '') {
 				const base = getSetting('defaultPlaylist');
 				const combatPlaylists = new Map(
-					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)])
+					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]),
 				);
 				return pick(getHighestPriority(combatPlaylists)).music;
 			}

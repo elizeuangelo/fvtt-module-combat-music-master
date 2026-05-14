@@ -1,6 +1,8 @@
 import { getCombatMusic, stringifyMusic } from '../music-manager.js';
 import { getSetting, MODULE_ID, setSetting } from '../settings.js';
 
+const DEFAULT_TRAIT_MUSIC_PRIORITY = 15;
+
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -81,7 +83,7 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 			ev.preventDefault();
 			ev.stopPropagation();
 			this._preview = this.#getRuleData();
-			this._preview.push({ trait: '', playlistId: '', trackId: '', priority: 10 });
+			this._preview.push({ trait: '', playlistId: '', trackId: '', priority: DEFAULT_TRAIT_MUSIC_PRIORITY });
 			this.render(true);
 		});
 
@@ -102,7 +104,8 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 			const trait = fieldset.querySelector('input[name="trait"]').value.trim().toLowerCase();
 			const playlistId = fieldset.querySelector('select[name="playlist"]').value;
 			const trackId = fieldset.querySelector('select[name="track"]').value;
-			const priority = parseInt(fieldset.querySelector('input[name="priority"]').value) || 10;
+			const priority =
+				parseInt(fieldset.querySelector('input[name="priority"]').value) || DEFAULT_TRAIT_MUSIC_PRIORITY;
 			const playlist = game.playlists.get(playlistId);
 			const track = playlist?.sounds.get(trackId);
 			return { trait, playlistId, trackId, music: stringifyMusic(track ?? playlist), priority };

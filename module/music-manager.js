@@ -17,7 +17,7 @@ function pauseAmbienceMusic() {
 }
 
 function getCombatPausedMusics(combat) {
-	return [...createPriorityList('', combat).values()]
+	return [...createPriorityList(null, combat).keys()]
 		.map(({ music }) => parseMusic(music))
 		.filter((s) => s.pausedTime || s.playing);
 }
@@ -96,12 +96,15 @@ function createPriorityList(tokenId, combat = game.combat) {
 		const music = getTokenMusic(combatant.token),
 			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? DEFAULT_TOKEN_MUSIC_PRIORITY,
 			token = combatant.token.id;
-		if (music && (combatant.token.getFlag(MODULE_ID, 'turnOnly') === false || token === tokenId))
+		if (
+			music &&
+			(tokenId === null || combatant.token.getFlag(MODULE_ID, 'turnOnly') === false || token === tokenId)
+		)
 			priorityList.set({ source: token, music }, priority);
 	}
 
 	// Customized priorities
-	Hooks.call('updateCMMPriorityList', priorityList, combat);
+	Hooks.call('refreshCMMPriorityList', priorityList, combat);
 	return priorityList;
 }
 
@@ -154,7 +157,7 @@ export function getCombatMusic() {
 
 export function refreshTurnMusic(combat = game.combat) {
 	if (!combat.started || getCombatMusic().length === 0) return;
-	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId, combat));
+	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
 	if (highestPriority.length === 0) return;
 	const sorted = pick(highestPriority);
 	updateCombatMusic(combat, sorted.music, sorted.token);

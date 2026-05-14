@@ -139,7 +139,7 @@ Hooks.on('updateSetting', (setting) => {
 });
 
 // Custom playlist hook
-Hooks.on('updateCMMPriorityList', (playlists, combat) => {
+Hooks.on('refreshCMMPriorityList', (playlists, combat) => {
 	const traitRules = getSetting('traitRules') ?? [];
 	if (traitRules.length === 0) return;
 	const hostileTraits = new Set();

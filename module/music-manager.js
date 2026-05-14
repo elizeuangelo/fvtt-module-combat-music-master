@@ -69,6 +69,8 @@ export async function updateCombatMusic(combat, music, token) {
 				else await oldSound.stopAll();
 			}
 		}
+	}
+	if (sound.playing === false) {
 		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
 		else {
 			if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
@@ -129,12 +131,12 @@ export function stringifyMusic(sound) {
 	return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
 
-export function setCombatMusic(sound, combat = game.combat, token) {
+export function setCombatMusic(sound, combat = game.combat, source) {
 	if (combat) {
 		combat.update({
 			[`flags.${MODULE_ID}`]: {
 				currentMusic: stringifyMusic(sound),
-				token,
+				source,
 			},
 		});
 	}
@@ -156,7 +158,7 @@ export function getCombatMusic() {
 }
 
 export function refreshTurnMusic(combat = game.combat) {
-	if (!combat.started || getCombatMusic().length === 0) return;
+	if (!combat || !combat.started || getCombatMusic().length === 0) return;
 	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
 	if (highestPriority.length === 0) return;
 	const sorted = pick(highestPriority);

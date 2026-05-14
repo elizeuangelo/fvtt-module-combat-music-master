@@ -1,5 +1,4 @@
 import { MODULE_ID } from './constants.js';
-import { parseMusic } from './music-manager.js';
 import { getSetting, setSetting } from './settings.js';
 
 /* -------------------------------------------- */
@@ -9,7 +8,6 @@ import { getSetting, setSetting } from './settings.js';
 export async function exportMusicConfig() {
 	const combatPlaylists = game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 	const defaultPlaylistId = getSetting('defaultPlaylist');
-	const traitRules = getSetting('traitRules') ?? [];
 
 	const playlists = combatPlaylists.map((playlist) => ({
 		name: playlist.name,
@@ -24,26 +22,14 @@ export async function exportMusicConfig() {
 		})),
 	}));
 
-	// Resolve trait rules to names so they survive across worlds.
-	const resolvedTraitRules = traitRules.map((rule) => {
-		const sound = parseMusic(rule.music);
-		const playlist = 'error' in sound ? null : (sound.parent ?? sound);
-		const track = playlist && sound !== playlist ? sound : null;
-		return {
-			trait: rule.trait,
-			priority: rule.priority,
-			playlistName: playlist?.name ?? '',
-			trackName: track?.name ?? '',
-		};
-	});
-
 	const data = {
 		world: game.world.id,
 		version: game.modules.get(MODULE_ID)?.version ?? '?',
 		exportedAt: new Date().toISOString(),
 		playlists,
-		traitRules: resolvedTraitRules,
 	};
+
+	Hooks.call('CMMExport', data);
 
 	const json = JSON.stringify(data, null, 2);
 	saveDataToFile(json, 'application/json', `${game.world.id}.music.json`);
@@ -127,25 +113,6 @@ async function applyImport(data) {
 	}
 
 	if (defaultPlaylistId) await setSetting('defaultPlaylist', defaultPlaylistId);
-
-	// Resolve trait rules using the map we built during import.
-	if (data.traitRules?.length) {
-		const resolvedRules = data.traitRules
-			.map((rule) => {
-				const playlist = playlistMap.get(rule.playlistName);
-				const track = rule.trackName ? playlist?.sounds.contents.find((s) => s.name === rule.trackName) : null;
-				const music = track ? playlist.id + '.' + track.id : (playlist?.id ?? '');
-				return {
-					trait: rule.trait,
-					priority: rule.priority,
-					playlistId: playlist?.id ?? '',
-					trackId: track?.id ?? '',
-					music,
-				};
-			})
-			.filter((r) => r.music);
-		await setSetting('traitRules', resolvedRules);
-	}
-
+	Hooks.call('CMMImport', data, playlistMap);
 	ui.notifications.info('Combat Music Master | Import complete!');
 }

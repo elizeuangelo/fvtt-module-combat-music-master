@@ -19,19 +19,22 @@ function pauseAmbienceMusic() {
 
 function getCombatPausedMusics(combat) {
 	return [...createPriorityList(null, combat).keys()]
-		.map(({ music }) => parseMusic(music))
+		.map(({ music }) => parseMusic(music).catch(() => null))
+		.filter(Boolean)
 		.filter((s) => s.pausedTime || s.playing);
 }
 
 function resumeAmbienceMusic(combat) {
-	const paused = getSetting('pausedAmbienceSounds').map((s) => parseMusic(s));
+	const paused = getSetting('pausedAmbienceSounds')
+		.map((s) => parseMusic(s).catch(() => null))
+		.filter(Boolean);
 	const combatPaused = getCombatPausedMusics(combat);
 	combatPaused.forEach((sound) => {
 		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
 	});
 	combat.getFlag(MODULE_ID, 'combatPausedSounds', []);
-	const sound = parseMusic(getCurrentMusic(combat));
-	if (!('error' in sound)) {
+	const sound = parseMusic(getCurrentMusic(combat)).catch(() => null);
+	if (sound) {
 		if (sound.documentName === 'Playlist') sound.stopAll();
 		else sound.update({ playing: false, pausedTime: null });
 	}
@@ -54,15 +57,19 @@ function getCurrentMusic(combat) {
 }
 
 export async function updateCombatMusic(combat, music, token) {
-	const oldMusic = getCurrentMusic(combat);
-	const oldSound = parseMusic(oldMusic ?? '');
-	const sound = parseMusic(music);
-	if ('error' in sound) {
-		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
-		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
+	let nextSound;
+	try {
+		nextSound = parseMusic(music);
+	} catch (e) {
+		if (e.message) ui.notifications.error(e.message);
+		console.warn(e);
 		return;
 	}
-	if (oldMusic !== music) {
+
+	const oldMusicString = getCurrentMusic(combat);
+	const oldSound = parseMusic(oldMusicString).catch(() => null);
+
+	if (oldMusicString !== music) {
 		if (!('error' in oldSound)) {
 			if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
 			else {
@@ -71,15 +78,17 @@ export async function updateCombatMusic(combat, music, token) {
 			}
 		}
 	}
-	if (sound.playing === false) {
-		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') await resume(sound);
+
+	if (nextSound.playing === false) {
+		if (getSetting('pauseTrack') && nextSound.documentName === 'PlaylistSound') await resume(nextSound);
 		else {
-			if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
-			else sound.playAll();
+			if (nextSound.documentName === 'PlaylistSound') nextSound.parent.playSound(nextSound);
+			else nextSound.playAll();
 		}
 	}
+
 	combat._combatMusic = music;
-	return setCombatMusic(sound, combat, token);
+	return setCombatMusic(nextSound, combat, token);
 }
 
 function createPriorityList(tokenId, combat = game.combat) {
@@ -121,11 +130,16 @@ export function pick(array) {
 }
 
 export function parseMusic(flag) {
-	const rgx = /(\w+)\.?(\w+)?/.exec(flag);
-	if (!rgx) return { error: 'invalid flag' };
-	const playlist = game.playlists.get(rgx[1]),
-		sound = playlist?.sounds.get(rgx[2]);
-	return sound ?? playlist ?? { error: 'not found', rgx };
+	if (!flag) return null;
+	const match = /^([A-Za-z0-9_-]+)(?:\\.([A-Za-z0-9_-]+))?$/.exec(flag.trim());
+	if (!match) throw new Error(`Combat Music Master: Invalid music reference "${flag}".`);
+	const [, playlistId, trackId] = match;
+	const playlist = game.playlists.get(playlistId);
+	if (!playlist) throw new Error(`Combat Music Master: Playlist "${playlistId}" not found.`);
+	if (!trackId) return playlist;
+	const track = playlist.sounds.get(trackId);
+	if (!track) throw new Error(`Combat Music Master: Track "${trackId}" not found in playlist "${playlist.name}".`);
+	return track;
 }
 
 export function stringifyMusic(sound) {

@@ -60,15 +60,6 @@ export function setSetting(name, value) {
 	return game.settings.set(MODULE_ID, name, value);
 }
 
-export function debugLog(...args) {
-	try {
-		if (!game?.settings || !game.settings.get(MODULE_ID, 'debugLogging')) return;
-		console.log('Combat Music Master |', ...args);
-	} catch (_error) {
-		// Ignore logging failures during early startup.
-	}
-}
-
 Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {
 		game.settings.register(MODULE_ID, key, setting);

@@ -7,3 +7,4 @@ declare var saveDataToFile: any;
 declare var Playlist: any;
 declare var CombatMusicMaster: any;
 declare var CONFIG: any;
+declare var canvas: any;

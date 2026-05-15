@@ -130,22 +130,8 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 		body: { template: 'modules/combat-music-master/templates/inspector.hbs', scrollable: [''] },
 	};
 
-	_onRender(context, options) {
-		super._onRender(context, options);
-		this.setupEventListeners();
-	}
-
-	setupEventListeners() {
-		// Refresh button
-		this.element.querySelector('[data-action="refresh"]')?.addEventListener('click', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			this.#refresh();
-		});
-	}
-
-	#refresh() {
-		this.render(true);
+	static getInstance() {
+		return [...this.instances()][0];
 	}
 
 	explainCombatMusicDecision(combat = game.combat) {
@@ -231,3 +217,7 @@ function addButtonToContextMenu(_combatTracker, options) {
 		});
 	}
 }
+
+Hooks.on('CMMRefreshturnMusic', () => {
+	CombatMusicInspector.getInstance()?.render(true);
+});

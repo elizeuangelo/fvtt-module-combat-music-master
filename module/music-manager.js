@@ -176,12 +176,14 @@ export function getCombatMusicList() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
-export function refreshTurnMusic(combat = game.combat) {
+export async function refreshTurnMusic(combat = game.combat) {
 	if (!combat || !combat.started || getCombatMusicList().length === 0) return;
 	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
 	if (highestPriority.length === 0) return;
 	const sorted = pick(highestPriority);
-	return updateCombatMusic(combat, sorted.music, sorted.source);
+	const promise = await updateCombatMusic(combat, sorted.music, sorted.source);
+	Hooks.call('CMMRefreshturnMusic', sorted.music, sorted.source);
+	return promise;
 }
 
 const debouncedRefreshTurnMusic = debounce(refreshTurnMusic);

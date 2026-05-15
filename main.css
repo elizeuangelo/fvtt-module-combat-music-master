@@ -32,12 +32,6 @@ li.cmm-inspector-candidate.winner {
     outline: 2px solid gold;
 }
 
-.cmm-inspector-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-}
-
 .cmm-pl-chooser li label {
     cursor: pointer;
 }

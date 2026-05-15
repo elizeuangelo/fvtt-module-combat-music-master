@@ -374,6 +374,7 @@ export function getTokenMusic(token) {
 	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
 	const musicList = token.getFlag(MODULE_ID, 'musicList');
 	if (!musicList) return;
+	if (musicList.filter((x) => x[0]).length === 0) return;
 
 	if (attribute.value > attribute.max) attribute.value = attribute.max;
 	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;

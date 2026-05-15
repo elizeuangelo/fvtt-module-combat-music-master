@@ -455,6 +455,7 @@ function injectDirectTokenConfigButton(app, html) {
 		const toggle = activeRow.querySelector('.cmm-direct-active-toggle');
 		toggle?.addEventListener('change', async (event) => {
 			try {
+				// @ts-ignore
 				await token.update({ [`flags.${MODULE_ID}.active`]: !!event.currentTarget.checked });
 			} catch (error) {
 				console.error('Combat Music Master | Failed to toggle token music active flag:', error);

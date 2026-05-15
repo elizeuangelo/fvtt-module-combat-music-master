@@ -1,5 +1,6 @@
-import { explainCombatMusicDecision, parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { getSetting, MODULE_ID } from './settings.js';
+import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
+import { explainCombatMusicDecision, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
+import { getSetting } from './settings.js';
 import { createOption } from './token.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -42,16 +43,22 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 			initial: '',
 			blank: true,
 		}),
+		priority: new foundry.data.fields.NumberField({
+			name: 'priority',
+			label: 'Priority',
+			initial: DEFAULT_ENCOUNTER_MUSIC_PRIORITY,
+		}),
 	});
 
 	async _prepareContext() {
 		const playlists = game.playlists.contents
 			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
 			.map((p) => ({ value: p.id, label: p.name }));
-		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
-		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
-		const track = playlist === selected ? undefined : 'error' in selected ? undefined : selected;
+		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music'));
+		const playlist = selected.data?.playlist;
+		const track = selected.data?.track;
 		const tracks = playlist ? playlist.sounds.contents.map((s) => ({ value: s.id, label: s.name })) : [];
+		const priority = game.combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
 		return {
 			rootId: this.id,
 			playlists,
@@ -59,6 +66,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 			selectedTrack: track?.id,
 			fields: CombatTrackerMusicManager.#schema.fields,
 			tracks,
+			priority,
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
 	}
@@ -92,12 +100,16 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		const playlist = game.playlists.get(data.playlist);
 		const track = playlist?.sounds.get(data.track);
 		const sound = stringifyMusic(track ?? playlist);
+		const priority = data.priority;
 		game.combat
 			?.update({
-				[`flags.${MODULE_ID}.overrideMusic`]: sound,
+				[`flags.${MODULE_ID}`]: {
+					music: sound,
+					priority,
+				},
 			})
 			.then(() => {
-				if (game.combat.started) updateTurnMusic(game.combat);
+				if (game.combat.started) refreshTurnMusic(game.combat);
 			});
 	}
 }
@@ -120,20 +132,21 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_prepareContext() {
 		const decision = explainCombatMusicDecision(game.combat);
-		const winner = parseMusic(decision.winner ?? '');
-		const winnerLabel =
-			'error' in winner || !decision.winner
-				? decision.winner || '(none)'
-				: winner.documentName === 'PlaylistSound'
-				? `${winner.parent.name} / ${winner.name}`
-				: winner.name;
+		const winner = parseMusic(decision.winner);
+		const winnerLabel = !decision.winner.data
+			? decision.winner || '(none)'
+			: winner.data.track
+				? `${winner.data.playlist} / ${winner.data.track.name}`
+				: winner.data.playlist.name;
 		return {
 			...decision,
 			winnerLabel,
 			candidates: (decision.candidates ?? []).map((c) => {
 				const parsed = c.parsed;
-				if ('error' in parsed) return { ...c, label: `${c.music} (${parsed.error})` };
-				const label = parsed.documentName === 'PlaylistSound' ? `${parsed.parent.name} / ${parsed.name}` : parsed.name;
+				if (!parsed.data) return { ...c, label: `${c.music} (${parsed.error ?? 'empty'})` };
+				const label = parsed.data.track
+					? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+					: parsed.data.track.name;
 				return { ...c, label };
 			}),
 		};

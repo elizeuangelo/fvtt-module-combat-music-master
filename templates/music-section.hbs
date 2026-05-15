@@ -22,33 +22,42 @@
 		<p class="hint">The priority this token's playlist will compete against the others.</p>
 	</div>
 
-	<div class="form-group">
+	<div class="form-group cmm-tracked-resource-row">
 		<label>Tracked Resource</label>
 		<div class="form-fields">
 			<select class="bar-attribute" name="tracked-resource">
 				{{selectOptions completeAttributes selected=trackedResource.attribute blank=(localize "None")}}
 			</select>
+			{{#unless isDefault}}
+			<div class="form-fields bar-data">
+				<input type="number" data-tracked-resource-value value="{{trackedResource.value}}" disabled />
+				<span class="sep">/</span>
+				<input type="number" data-tracked-resource-max value="{{trackedResource.max}}" disabled />
+			</div>
+			{{/unless}}
 		</div>
 	</div>
-
-	{{#unless isDefault}}
-	<div class="form-group slim">
-		<div class="form-fields bar-data">
-			<input type="number" data-tracked-resource-value value="{{trackedResource.value}}" disabled />
-			<span class="sep">/</span>
-			<input type="number" data-tracked-resource-max value="{{trackedResource.max}}" disabled />
-		</div>
-	</div>
-	{{/unless}}
 
 	<hr />
+
+	<div class="form-group cmm-track-toolbar">
+		<label>Actions</label>
+		<div class="form-fields">
+			<button type="button" data-action="previewTokenRule">
+				<i class="fa-solid fa-play"></i> Preview Winner
+			</button>
+			<button type="button" data-action="applyToControlled">
+				<i class="fa-solid fa-clone"></i> Apply To Controlled
+			</button>
+		</div>
+	</div>
 
 	<div class="track-selections">
 		<header class="track-selection">
 			<div class="track-selection-playlist">Playlist</div>
 			<div class="track-selection-track">Track</div>
-			<div class="track-selection-range">Resource Threshold (%)</div>
-			<div class="track-selection-controls">
+			<div class="track-selection-range">Value (%)</div>
+			<div class="track-selection-controls track-selection-controls-header">
 				<a class="action-button" data-action="addTrack" data-tooltip="Add Track">
 					<i class="fa-solid fa-plus"></i>
 				</a>
@@ -74,13 +83,27 @@
 				{{#if this.disabled}}disabled{{/if}}>
 			</div>
 			<div class="track-selection-controls">
-				{{#unless this.disabled}}
-				<a class="action-button" data-action="removeTrack" data-tooltip="Remove Track">
+				<a class="action-button" data-action="previewRow" data-tooltip="Preview this row">
+					<i class="fa-solid fa-play"></i>
+				</a>
+				<a class="action-button" data-action="stopRow" data-tooltip="Stop this row">
+					<i class="fa-solid fa-stop"></i>
+				</a>
+				<a class="action-button {{#if this.disabled}}is-hidden{{/if}}" data-action="removeTrack" data-tooltip="Remove Track">
 					<i class="fa-solid fa-times"></i>
 				</a>
-				{{/unless}}
 			</div>
+			{{#if this.error}}
+			<p class="hint" style="grid-column: 1 / -1; color: var(--color-level-error); margin-top: 4px;">
+				Invalid music reference ({{this.error}}): {{this.flag}}
+			</p>
+			{{/if}}
 		</fieldset>
 		{{/each}}
 	</div>
+	{{#if hasInvalidEntries}}
+	<p class="hint" style="color: var(--color-level-error); margin-top: 6px;">
+		One or more configured music references are invalid or deleted. Save after correcting entries.
+	</p>
+	{{/if}}
 </div>

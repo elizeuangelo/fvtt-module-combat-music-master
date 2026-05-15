@@ -1,118 +1,164 @@
-import { getSetting, MODULE_ID } from './settings.js';
+import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
+import { getSetting, setSetting } from './settings.js';
 import { getTokenMusic } from './token.js';
+import { debounce, Err, Ok } from './utils.js';
 
-function playCombatMusic() {
-	if (getCombatMusic().length === 0) return;
-	if (getSetting('pauseAmbience')) pauseAllMusic();
+function pauseAmbienceMusic() {
+	if (getCombatMusicList().length === 0) return;
+	if (!getSetting('pauseAmbience')) return;
+	if (getSetting('pausedAmbienceSounds').length) return;
+	const paused = game.playlists.playing.map((p) => p.sounds.contents.filter((p) => p.playing)).flat();
+	for (const sound of paused) {
+		sound.update({ playing: false, pausedTime: sound.sound.currentTime });
+	}
+	setSetting(
+		'pausedAmbienceSounds',
+		paused.map((s) => stringifyMusic(s)),
+	);
 }
 
-let combatPaused = [];
-
-async function pause(sound) {
-	combatPaused.push(sound);
-	sound.update({ playing: false, pausedTime: sound.sound.currentTime });
+function getCombatPausedMusics(combat) {
+	return [...createPriorityList(null, combat).keys()]
+		.map(({ music }) => parseMusic(music).data?.sound)
+		.filter(Boolean)
+		.filter((s) => s.pausedTime || s.playing);
 }
 
-async function resume(sound) {
-	sound.update({ playing: true });
-	const idx = combatPaused.indexOf(sound);
-	if (idx === -1) return;
-	combatPaused.splice(idx, 1);
+function resumeAmbienceMusic(combat) {
+	const paused = getSetting('pausedAmbienceSounds')
+		.map((s) => parseMusic(s).data?.sound)
+		.filter(Boolean);
+	const combatPaused = getCombatPausedMusics(combat);
+	combatPaused.forEach((sound) => {
+		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
+	});
+	combat.getFlag(MODULE_ID, 'combatPausedSounds', []);
+	const parsedMusic = parseMusic(getCombatMusic(combat)).data;
+	if (parsedMusic) {
+		if (parsedMusic.track) parsedMusic.track.update({ playing: false, pausedTime: null });
+		else parsedMusic.playlist.stopAll();
+	}
+	for (const sound of paused) sound.update({ playing: true });
+	setSetting('pausedAmbienceSounds', []);
 }
 
-export async function updateCombatMusic(combat, music, token) {
-	const oldMusic = combat._combatMusic;
-	const oldSound = parseMusic(oldMusic ?? '');
-	const sound = parseMusic(music);
-	if ('error' in sound) {
-		if (sound.error === 'not found') ui.notifications.error(`${sound.rgx[2] ? 'Track' : 'Playlist'} not found.`);
-		if (sound.error === 'invalid flag') ui.notifications.error('Bad configuration.');
+function pause(sound) {
+	const currentTime = sound.sound?.currentTime ?? null;
+	return sound.update({ playing: false, pausedTime: currentTime });
+}
+
+function resume(sound) {
+	return sound.update({ playing: true });
+}
+
+export async function updateCombatMusic(combat, music, source) {
+	const parsedNextMusic = parseMusic(music);
+
+	if (!parsedNextMusic.data) {
+		if (parsedNextMusic.error) {
+			ui.notifications.error(parsedNextMusic.message);
+			console.warn(parsedNextMusic.message);
+		}
 		return;
 	}
-	if (oldMusic !== music) {
-		if (!('error' in oldSound)) {
-			if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
+
+	const previousMusic = getCombatMusic(combat);
+	const parsedPreviousMusic = parseMusic(previousMusic);
+
+	if (previousMusic !== music) {
+		if (parsedPreviousMusic.data) {
+			if (getSetting('pauseTrack') && parsedPreviousMusic.data.track) await pause(parsedPreviousMusic.data.track);
 			else {
-				if (oldSound.documentName === 'PlaylistSound') await oldSound.parent.stopSound(oldSound);
-				else await oldSound.stopAll();
+				if (parsedPreviousMusic.data.track) await parsedPreviousMusic.data.track.stopSound(parsedPreviousMusic);
+				else await parsedPreviousMusic.data.playlist.stopAll();
 			}
 		}
-		if (getSetting('pauseTrack') && sound.documentName === 'PlaylistSound') resume(sound);
+	}
+
+	const nextSound = parsedNextMusic.data.sound;
+
+	if (nextSound.playing === false) {
+		if (getSetting('pauseTrack') && parsedNextMusic.data.track) await resume(nextSound);
 		else {
-			if (sound.documentName === 'PlaylistSound') sound.parent.playSound(sound);
-			else sound.playAll();
+			if (parsedNextMusic.data.track) nextSound.parent.playSound(nextSound);
+			else nextSound.playAll();
 		}
 	}
-	combat._combatMusic = music;
-	setCombatMusic(sound, combat, token);
+	return setCombatMusic(nextSound, combat, source);
 }
 
-function createPriorityList(tokenId) {
+export function createPriorityList(tokenId, combat = game.combat) {
 	const base = getSetting('defaultPlaylist');
-	const combatPlaylists = new Map(getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]));
-	for (const combatant of game.combat.combatants.contents) {
+	const priorityList = new Map(
+		getCombatMusicList().map((p) => [{ source: 'settings', music: p.id }, +(p.id === base)]),
+	);
+
+	// Combat music priority
+	const combatMusic = combat.getFlag(MODULE_ID, 'music');
+	if (combatMusic) {
+		const combatPriority = combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
+		priorityList.set({ source: 'encounter', music: combatMusic }, combatPriority);
+	}
+
+	// Tokens music priority
+	for (const combatant of combat.combatants.contents) {
 		if (!combatant.token) continue;
 		const music = getTokenMusic(combatant.token),
-			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? 10,
+			priority = combatant.token.getFlag(MODULE_ID, 'priority') ?? DEFAULT_TOKEN_MUSIC_PRIORITY,
 			token = combatant.token.id;
-		if (music && (combatant.token.getFlag(MODULE_ID, 'turnOnly') === false || token === tokenId))
-			combatPlaylists.set({ token, music }, priority);
+		if (
+			music &&
+			(tokenId === null || combatant.token.getFlag(MODULE_ID, 'turnOnly') === false || token === tokenId)
+		)
+			priorityList.set({ source: token, music }, priority);
 	}
-	return combatPlaylists;
+
+	// Customized priorities
+	Hooks.call('refreshCMMPriorityList', priorityList, combat);
+	return priorityList;
 }
 
 export function getHighestPriority(map) {
 	const max = Math.max(...map.values());
-	return [...map].filter(([p, v]) => v === max).map(([p, v]) => p);
+	return [...map].filter(([, v]) => v === max).map(([p]) => p);
 }
 
 export function pick(array) {
 	return array[~~(Math.random() * array.length)];
 }
 
-let paused = [];
-
-function pauseAllMusic() {
-	paused = game.playlists.playing.map((p) => p.sounds.contents.filter((p) => p.playing)).flat();
-	for (const sound of paused) sound.update({ playing: false, pausedTime: sound.sound.currentTime });
-}
-
-function resumePlaylists(combat) {
-	combatPaused.forEach((sound) => {
-		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
-	});
-	combatPaused = [];
-	const sound = parseMusic(combat._combatMusic);
-	if (!('error' in sound)) {
-		if (sound.documentName === 'Playlist') sound.stopAll();
-		else sound.update({ playing: false, pausedTime: null });
-	}
-	combat._combatMusic = '';
-	for (const sound of paused) sound.update({ playing: true });
-	paused = [];
-}
-
 export function parseMusic(flag) {
-	const rgx = /(\w+)\.?(\w+)?/.exec(flag);
-	if (!rgx) return { error: 'invalid flag' };
-	const playlist = game.playlists.get(rgx[1]),
-		sound = playlist?.sounds.get(rgx[2]);
-	return sound ?? playlist ?? { error: 'not found', rgx };
+	if (!flag) return Ok(null);
+	const match = /^([A-Za-z0-9_-]+)(?:.([A-Za-z0-9_-]+))?$/.exec(flag.trim());
+	if (!match) return Err('INVALID', `Combat Music Master: Invalid music reference "${flag}".`);
+	const [, playlistId, trackId] = match;
+	const playlist = game.playlists.get(playlistId);
+	if (!playlist) return Err('NOT_FOUND_PLAYLIST', `Combat Music Master: Playlist "${playlistId}" not found.`);
+	if (!trackId) return Ok({ playlist, sound: playlist });
+	const track = playlist.sounds.get(trackId);
+	if (!track)
+		return Err(
+			'NOT_FOUND_TRACK',
+			`Combat Music Master: Track "${trackId}" not found in playlist "${playlist.name}".`,
+		);
+	return Ok({ playlist, track, sound: track });
 }
 
 export function stringifyMusic(sound) {
 	return (sound?.parent ? sound.parent.id + '.' + sound.id : sound?.id) ?? '';
 }
 
-export function setCombatMusic(sound, combat = game.combat, token) {
-	if (combat) {
-		combat.update({
-			[`flags.${MODULE_ID}`]: {
-				currentMusic: stringifyMusic(sound),
-				token,
-			},
-		});
-	}
+export function getCombatMusic(combat) {
+	return combat.getFlag(MODULE_ID, 'currentMusic');
+}
+
+export function setCombatMusic(sound, combat = game.combat, source) {
+	return combat?.update({
+		[`flags.${MODULE_ID}`]: {
+			currentMusic: stringifyMusic(sound),
+			source,
+		},
+	});
 }
 
 export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly = false, active = false) {
@@ -126,25 +172,21 @@ export function setTokenConfig(token, resource, sounds, priority = 10, turnOnly 
 	});
 }
 
-export function getCombatMusic() {
+export function getCombatMusicList() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
-export function updateTurnMusic(combat) {
-	if (!combat.started || getCombatMusic().length === 0) return;
-	let music = combat.getFlag(MODULE_ID, 'overrideMusic');
-	let token = '';
-	if (!music) {
-		const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId));
-		const musicFound = highestPriority.find((p) => p.music === music);
-		if (!musicFound) {
-			const sorted = pick(highestPriority);
-			token = sorted.token;
-			music = sorted.music;
-		}
-	}
-	if (music) updateCombatMusic(combat, music, token);
+export async function refreshTurnMusic(combat = game.combat) {
+	if (!combat || !combat.started || getCombatMusicList().length === 0) return;
+	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
+	if (highestPriority.length === 0) return;
+	const sorted = pick(highestPriority);
+	const promise = await updateCombatMusic(combat, sorted.music, sorted.source);
+	Hooks.call('CMMRefreshturnMusic', sorted.music, sorted.source);
+	return promise;
 }
+
+const debouncedRefreshTurnMusic = debounce(refreshTurnMusic);
 
 window.CombatMusicMaster = {
 	setCombatMusic,
@@ -153,8 +195,14 @@ window.CombatMusicMaster = {
 
 Hooks.once('setup', () => {
 	if (game.user.isGM) {
-		Hooks.on('combatStart', playCombatMusic);
-		Hooks.on('updateCombat', updateTurnMusic);
-		Hooks.on('deleteCombat', resumePlaylists);
+		Hooks.on('combatStart', pauseAmbienceMusic);
+		Hooks.on('preDeleteCombat', resumeAmbienceMusic);
+		Hooks.on('combatTurnChange', debouncedRefreshTurnMusic);
+		Hooks.on('deleteCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
+		Hooks.on('createCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
+		Hooks.on('updateToken', (token) => {
+			if (!game.combat || token.combatant?.combat !== game.combat) return;
+			debouncedRefreshTurnMusic();
+		});
 	}
 });

@@ -1,14 +1,14 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
-	parseMusic,
-	updateCombatMusic,
-	setTokenConfig,
-	stringifyMusic,
-	getCombatMusic,
+	getCombatMusicList,
 	getHighestPriority,
+	parseMusic,
 	pick,
+	stringifyMusic,
+	updateCombatMusic,
 } from './music-manager.js';
-import { MODULE_ID, getSetting } from './settings.js';
+import { getSetting } from './settings.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -47,7 +47,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		return {
 			musicList: token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]],
 			resource: token.getFlag(MODULE_ID, 'resource'),
-			priority: token.getFlag(MODULE_ID, 'priority') ?? 10,
+			priority: token.getFlag(MODULE_ID, 'priority') ?? DEFAULT_TOKEN_MUSIC_PRIORITY,
 			active: token.getFlag(MODULE_ID, 'active') ?? false,
 			turnOnly: token.getFlag(MODULE_ID, 'turnOnly') ?? false,
 		};
@@ -55,7 +55,8 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_prepareSubmitData() {
 		const active = this.element.querySelector('input[name="music-active"]').checked;
-		const priority = parseInt(this.element.querySelector('input[name="priority"]').value) || 10;
+		const priority =
+			parseInt(this.element.querySelector('input[name="priority"]').value) || DEFAULT_TOKEN_MUSIC_PRIORITY;
 		const turnOnly = this.element.querySelector('input[name="turn-only"]').checked;
 		const resource = this.element.querySelector('select[name="tracked-resource"]').value;
 		const musicList = this.#getTrackData();
@@ -74,18 +75,20 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		const trackedResource = resource
 			? token.getBarAttribute?.('tracked-resource', {
 					alternative: resource,
-			  })
+				})
 			: token.getBarAttribute('bar1');
 
 		const trackSelection = musicList.map((music, index) => {
 			const parsed = parseMusic(music[0]);
-			const playlist = 'error' in parsed ? undefined : parsed?.parent ?? parsed;
-			const track = playlist === parsed ? undefined : 'error' in parsed ? undefined : parsed;
+			const playlist = parsed.data?.playlist;
+			const track = parsed.data?.track;
 			return {
 				threshold: music[1],
 				disabled: index === 0,
 				playlistId: playlist?.id ?? '',
 				trackId: track?.id ?? '',
+				error: 'error' in parsed ? parsed.message : '',
+				flag: music[0] ?? '',
 			};
 		});
 
@@ -107,6 +110,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			musicActive: data.active,
 			turnOnly: data.turnOnly,
 			isDefault: false,
+			hasInvalidEntries: trackSelection.some((s) => !!s.error),
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
 	}
@@ -138,7 +142,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#populatePlaylistOptions(context) {
-		const combatPlaylists = getCombatMusic();
+		const combatPlaylists = getCombatMusicList();
 		const playlistSelects = this.element.querySelectorAll('select[name="playlist"]');
 
 		playlistSelects.forEach((select, index) => {
@@ -181,6 +185,22 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			});
 		});
 
+		this.element.querySelectorAll('[data-action="previewRow"]').forEach((button) => {
+			button.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.#onPreviewRow(event);
+			});
+		});
+
+		this.element.querySelectorAll('[data-action="stopRow"]').forEach((button) => {
+			button.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.#onStopRow(event);
+			});
+		});
+
 		// Playlist change handlers
 		this.element.querySelectorAll('select[name="playlist"]').forEach((select) => {
 			select.addEventListener('change', this.#onPlaylistChange.bind(this));
@@ -188,13 +208,25 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		// Resource change handler
 		this.element
-			.querySelector('select[name=tracked-resource')
-			.addEventListener('change', this.#onChangeBar.bind(this));
+			.querySelector('select[name="tracked-resource"]')
+			?.addEventListener('change', this.#onChangeBar.bind(this));
+
+		this.element.querySelector('[data-action="previewTokenRule"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#onPreviewTokenRule();
+		});
+
+		this.element.querySelector('[data-action="applyToControlled"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#onApplyToControlled();
+		});
 	}
 
 	/**
 	 * Handle changing the attribute bar in the drop-down selector to update the default current and max value
-	 * @param {Event} event  The select input change event
+	 * @param {Event & { target: HTMLInputElement }} event  The select input change event
 	 */
 	#onChangeBar(event) {
 		const form = this.form;
@@ -249,6 +281,63 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render(true);
 	}
 
+	#onPreviewTokenRule() {
+		const token = this.token;
+		const currentRuleMusic = getTokenMusic(token);
+		const parsed = parseMusic(currentRuleMusic);
+		if (!parsed.data) {
+			ui.notifications.warn(`Combat Music Master: No valid music selected for "${token.name}".`);
+			return;
+		}
+		const musicName = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
+		ui.notifications.info(`Combat Music Master Preview: ${token.name} -> ${musicName}`);
+	}
+
+	#onPreviewRow(event) {
+		const row = event.target.closest('.track-selection');
+		const index = Number(row?.dataset?.index);
+		if (Number.isNaN(index)) return;
+		const data = this.#getTrackData();
+		const music = data[index]?.[0];
+		const parsed = parseMusic(music);
+		if (!parsed.data) {
+			ui.notifications.warn(`Combat Music Master: This row has no valid track/playlist (${parsed.error}).`);
+			return;
+		}
+		const label = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
+		ui.notifications.info(`Combat Music Master Row Preview: ${label}`);
+		if (parsed.data.track) parsed.data.playlist.playSound(parsed.data.track);
+		else parsed.data.playlist.playAll();
+	}
+
+	async #onStopRow(event) {
+		const row = event.target.closest('.track-selection');
+		const index = Number(row?.dataset?.index);
+		if (Number.isNaN(index)) return;
+		const data = this.#getTrackData();
+		const music = data[index]?.[0];
+		const parsed = parseMusic(music);
+		if (!parsed.data) return;
+		if (parsed.data.track) parsed.data.playlist.stopSound(parsed.data.track);
+		else parsed.data.playlist.stopAll();
+	}
+
+	async #onApplyToControlled() {
+		const controlled = canvas?.tokens?.controlled?.map((t) => t.document).filter(Boolean) ?? [];
+		if (controlled.length <= 1) {
+			ui.notifications.warn('Combat Music Master: Select at least two tokens to batch apply settings.');
+			return;
+		}
+		const data = this._prepareSubmitData();
+		const targets = controlled.filter((doc) => doc.id !== this.token.id);
+		await Promise.all(targets.map((token) => token.update({ [`flags.${MODULE_ID}`]: data })));
+		ui.notifications.info(`Combat Music Master: Applied settings to ${targets.length} controlled token(s).`);
+	}
+
 	/**
 	 * @this {TokenMusicConfig}
 	 */
@@ -278,6 +367,33 @@ export function getTokenHeaderButtons(sheet, buttons) {
 	}
 }
 
+export function getTokenMusic(token) {
+	const active = token.getFlag(MODULE_ID, 'active');
+	if (!active) return;
+
+	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
+	const musicList = token.getFlag(MODULE_ID, 'musicList');
+	if (!musicList) return;
+	if (musicList.filter((x) => x[0]).length === 0) return;
+
+	if (attribute.value > attribute.max) attribute.value = attribute.max;
+	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
+
+	for (let i = musicList.length; i > 0; i--) {
+		const [music, threshold] = musicList[i - 1];
+		if (attrThreshold <= threshold) {
+			if (music === '') {
+				const base = getSetting('defaultPlaylist');
+				const combatPlaylists = new Map(
+					getCombatMusicList().map((p) => [{ token: '', music: p.id }, +(p.id === base)]),
+				);
+				return pick(getHighestPriority(combatPlaylists)).music;
+			}
+			return music;
+		}
+	}
+}
+
 function resourceTracker(actor) {
 	if (!game.combat?.started) return;
 	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
@@ -289,32 +405,6 @@ function resourceTracker(actor) {
 	if (music) updateCombatMusic(combatant.combat, music);
 }
 
-export function getTokenMusic(token) {
-	const active = token.getFlag(MODULE_ID, 'active');
-	if (!active) return;
-
-	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
-	const musicList = token.getFlag(MODULE_ID, 'musicList');
-	if (!musicList) return;
-
-	if (attribute.value > attribute.max) attribute.value = attribute.max;
-	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
-
-	for (let i = musicList.length; i > 0; i--) {
-		const [music, threshold] = musicList[i - 1];
-		if (attrThreshold <= threshold) {
-			if (music === '') {
-				const base = getSetting('defaultPlaylist');
-				const combatPlaylists = new Map(
-					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)])
-				);
-				return pick(getHighestPriority(combatPlaylists)).music;
-			}
-			return music;
-		}
-	}
-}
-
 Hooks.once('setup', () => {
 	if (game.user.isGM) {
 		Hooks.on('updateActor', resourceTracker);
@@ -322,3 +412,70 @@ Hooks.once('setup', () => {
 	}
 });
 Hooks.on('getHeaderControlsTokenApplication', getTokenHeaderButtons);
+
+function getConfigToken(app) {
+	return app?.token ?? app?.object ?? app?.document ?? null;
+}
+
+function injectDirectTokenConfigButton(app, html) {
+	try {
+		if (!game.user.isGM) return;
+		const token = getConfigToken(app);
+		if (!token) return;
+		if (html.querySelector('.cmm-direct-config-row') || html.querySelector('.cmm-direct-active-row')) return;
+
+		const targetGroup =
+			html.querySelector('[name="name"]')?.closest('.form-group') ??
+			html.querySelector('.tab .form-group') ??
+			html.querySelector('.tab');
+		if (!targetGroup) return;
+
+		const activeRow = document.createElement('div');
+		activeRow.className = 'form-group cmm-direct-active-row';
+		activeRow.innerHTML = `
+			<label>Use Token Music</label>
+			<div class="form-fields">
+				<input type="checkbox" class="cmm-direct-active-toggle" ${token.getFlag(MODULE_ID, 'active') ? 'checked' : ''} />
+			</div>
+			<p class="hint">Enable token-specific combat music rules for this token.</p>
+		`;
+
+		const configRow = document.createElement('div');
+		configRow.className = 'form-group cmm-direct-config-row';
+		configRow.innerHTML = `
+			<label>Combat Music</label>
+			<div class="form-fields">
+				<button type="button" class="cmm-direct-config-btn">
+					<i class="fas fa-music"></i> Open Combat Music
+				</button>
+			</div>
+			<p class="hint">Direct access to token combat music configuration.</p>
+		`;
+
+		const toggle = activeRow.querySelector('.cmm-direct-active-toggle');
+		toggle?.addEventListener('change', async (event) => {
+			try {
+				// @ts-ignore
+				await token.update({ [`flags.${MODULE_ID}.active`]: !!event.currentTarget.checked });
+			} catch (error) {
+				console.error('Combat Music Master | Failed to toggle token music active flag:', error);
+			}
+		});
+
+		const button = configRow.querySelector('.cmm-direct-config-btn');
+		button?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			new TokenMusicConfig(token).render(true);
+		});
+
+		targetGroup.insertAdjacentElement('afterend', configRow);
+		targetGroup.insertAdjacentElement('afterend', activeRow);
+		app.setPosition?.({ height: 'auto' });
+	} catch (error) {
+		console.error('Combat Music Master | Failed to inject direct token config button:', error);
+	}
+}
+
+Hooks.on('renderTokenConfig', injectDirectTokenConfigButton);
+Hooks.on('renderPrototypeTokenConfig', injectDirectTokenConfigButton);

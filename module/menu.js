@@ -1,5 +1,6 @@
 import { MODULE_ID } from './constants.js';
 import { getSetting, setSetting } from './settings.js';
+import { debugLog } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -94,12 +95,23 @@ class PlaylistManager extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (playlists.length !== data.combat.length) {
 			ui.notifications.error(`Playlists changed while configuration window was on.`);
 		}
+		const standard = this.element.querySelector('label.star')?.getAttribute('for').substring(9) ?? '';
+		debugLog('Saving combat playlist settings', {
+			changed: playlists
+				.map((playlist, i) => ({
+					id: playlist.id,
+					name: playlist.name,
+					from: playlist.getFlag(MODULE_ID, 'combat') || false,
+					to: data.combat[i],
+				}))
+				.filter((p) => p.from != p.to),
+			defaultPlaylist: standard,
+		});
 		for (let i = 0; i < playlists.length; i++) {
 			const playlist = playlists[i],
 				active = data.combat[i];
 			if (playlist.getFlag(MODULE_ID, 'combat') != active) playlist.setFlag(MODULE_ID, 'combat', active);
 		}
-		const standard = this.element.querySelector('label.star')?.getAttribute('for').substring(9) ?? '';
 		setSetting('defaultPlaylist', standard);
 	}
 

@@ -1,6 +1,7 @@
 import { MODULE_ID } from '../constants.js';
 import { getCombatMusicList, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
 import { getSetting, setSetting } from '../settings.js';
+import { debugLog } from '../utils.js';
 
 const DEFAULT_TRAIT_MUSIC_PRIORITY = 15;
 
@@ -148,10 +149,20 @@ Hooks.on('refreshCMMPriorityList', (playlists, combat) => {
 		if (combatant.token.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) continue;
 		for (const trait of combatant.token.actor.system?.traits?.value ?? []) hostileTraits.add(trait.toLowerCase());
 	}
+	debugLog('PF2 trait priority refresh', {
+		combatId: combat?.id,
+		ruleCount: traitRules.length,
+		hostileTraits: [...hostileTraits],
+	});
 	if (hostileTraits.size > 0) {
 		traitRules
 			.filter((r) => r.trait && hostileTraits.has(r.trait.toLowerCase()) && r.music)
 			.forEach((rules) => {
+				debugLog('PF2 trait rule matched', {
+					trait: rules.trait,
+					music: rules.music,
+					priority: rules.priority,
+				});
 				playlists.set({ source: `trait:${rules.trait}`, music: rules.music }, rules.priority);
 			});
 	}

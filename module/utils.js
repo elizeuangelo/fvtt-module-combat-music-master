@@ -1,4 +1,4 @@
-import { MODULE_ID } from './constants';
+import { MODULE_ID } from './constants.js';
 
 export function debounce(fn, delay = 100) {
 	let timer;
@@ -27,10 +27,12 @@ export function Err(error, message) {
 }
 
 export function debugLog(...args) {
+	if (!globalThis.game?.settings) return;
+
 	try {
-		if (!game?.settings || !game.settings.get(MODULE_ID, 'debugLogging')) return;
+		if (!game.settings.get(MODULE_ID, 'debugLogging')) return;
 		console.log('Combat Music Master |', ...args);
 	} catch (_error) {
-		// Ignore logging failures during early startup.
+		// Ignore settings access failures during early startup.
 	}
 }

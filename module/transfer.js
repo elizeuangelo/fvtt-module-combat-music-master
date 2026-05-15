@@ -1,5 +1,6 @@
 import { MODULE_ID } from './constants.js';
 import { getSetting, setSetting } from './settings.js';
+import { debugLog } from './utils.js';
 
 /* -------------------------------------------- */
 /*  Export                                      */
@@ -30,6 +31,11 @@ export async function exportMusicConfig() {
 	};
 
 	Hooks.call('CMMExport', data);
+	debugLog('Exporting music config', {
+		world: game.world.id,
+		playlistCount: playlists.length,
+		soundCount: playlists.reduce((total, playlist) => total + playlist.sounds.length, 0),
+	});
 
 	const json = JSON.stringify(data, null, 2);
 	saveDataToFile(json, 'application/json', `${game.world.id}.music.json`);
@@ -84,6 +90,11 @@ async function applyImport(data) {
 
 	for (const playlistData of data.playlists) {
 		let playlist = game.playlists.contents.find((p) => p.name === playlistData.name);
+		debugLog('Importing playlist', {
+			name: playlistData.name,
+			existing: !!playlist,
+			soundCount: playlistData.sounds?.length ?? 0,
+		});
 		if (!playlist) {
 			playlist = await Playlist.create({ name: playlistData.name, mode: playlistData.mode ?? -1 });
 		} else {
@@ -114,5 +125,9 @@ async function applyImport(data) {
 
 	if (defaultPlaylistId) await setSetting('defaultPlaylist', defaultPlaylistId);
 	Hooks.call('CMMImport', data, playlistMap);
+	debugLog('Music config import complete', {
+		playlistCount: data.playlists.length,
+		defaultPlaylistId,
+	});
 	ui.notifications.info('Combat Music Master: Import complete!');
 }

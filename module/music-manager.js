@@ -1,13 +1,17 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import { getSetting, setSetting } from './settings.js';
 import { getTokenMusic } from './token.js';
-import { debounce, Err, Ok } from './utils.js';
+import { debounce, debugLog, Err, Ok } from './utils.js';
 
 function pauseAmbienceMusic() {
 	if (getCombatMusicList().length === 0) return;
 	if (!getSetting('pauseAmbience')) return;
 	if (getSetting('pausedAmbienceSounds').length) return;
 	const paused = game.playlists.playing.map((p) => p.sounds.contents.filter((p) => p.playing)).flat();
+	debugLog('Pausing ambience sounds for combat', {
+		count: paused.length,
+		sounds: paused.map((s) => stringifyMusic(s)),
+	});
 	for (const sound of paused) {
 		sound.update({ playing: false, pausedTime: sound.sound.currentTime });
 	}
@@ -28,6 +32,11 @@ function resumeAmbienceMusic(combat) {
 	const paused = getSetting('pausedAmbienceSounds')
 		.map((s) => parseMusic(s).data?.sound)
 		.filter(Boolean);
+	debugLog('Resuming ambience sounds after combat', {
+		combatId: combat?.id,
+		count: paused.length,
+		sounds: paused.map((s) => stringifyMusic(s)),
+	});
 	const combatPaused = getCombatPausedMusics(combat);
 	combatPaused.forEach((sound) => {
 		if (!paused.includes(sound)) sound.update({ playing: false, pausedTime: null });
@@ -52,9 +61,20 @@ function resume(sound) {
 }
 
 export async function updateCombatMusic(combat, music, source) {
+	debugLog('updateCombatMusic requested', {
+		combatId: combat?.id,
+		music,
+		source,
+		previousMusic: combat ? getCombatMusic(combat) : undefined,
+	});
 	const parsedNextMusic = parseMusic(music);
 
 	if (!parsedNextMusic.data) {
+		debugLog('updateCombatMusic skipped: invalid next music', {
+			music,
+			error: parsedNextMusic.error,
+			message: parsedNextMusic.message,
+		});
 		if (parsedNextMusic.error) {
 			ui.notifications.error(parsedNextMusic.message);
 			console.warn(parsedNextMusic.message);
@@ -66,6 +86,12 @@ export async function updateCombatMusic(combat, music, source) {
 	const parsedPreviousMusic = parseMusic(previousMusic);
 
 	if (previousMusic !== music) {
+		debugLog('Switching combat music', {
+			from: previousMusic,
+			to: music,
+			source,
+			pauseTrack: getSetting('pauseTrack'),
+		});
 		if (parsedPreviousMusic.data) {
 			if (getSetting('pauseTrack') && parsedPreviousMusic.data.track) await pause(parsedPreviousMusic.data.track);
 			else {
@@ -78,6 +104,12 @@ export async function updateCombatMusic(combat, music, source) {
 	const nextSound = parsedNextMusic.data.sound;
 
 	if (nextSound.playing === false) {
+		debugLog('Starting selected combat music', {
+			music,
+			playlist: parsedNextMusic.data.playlist?.name,
+			track: parsedNextMusic.data.track?.name,
+			wasPlaying: nextSound.playing,
+		});
 		if (getSetting('pauseTrack') && parsedNextMusic.data.track) await resume(nextSound);
 		else {
 			if (parsedNextMusic.data.track) nextSound.parent.playSound(nextSound);
@@ -95,6 +127,12 @@ export function createPriorityList(tokenId, combat = game.combat) {
 
 	// Combat music priority
 	const combatMusic = combat.getFlag(MODULE_ID, 'music');
+	debugLog('createPriorityList started', {
+		combatId: combat?.id,
+		activeTokenId: tokenId,
+		defaultPlaylist: base,
+		combatMusic,
+	});
 	if (combatMusic) {
 		const combatPriority = combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
 		priorityList.set({ source: 'encounter', music: combatMusic }, combatPriority);
@@ -115,6 +153,10 @@ export function createPriorityList(tokenId, combat = game.combat) {
 
 	// Customized priorities
 	Hooks.call('refreshCMMPriorityList', priorityList, combat);
+	debugLog('createPriorityList completed', {
+		combatId: combat?.id,
+		entries: [...priorityList.entries()],
+	});
 	return priorityList;
 }
 
@@ -177,10 +219,29 @@ export function getCombatMusicList() {
 }
 
 export async function refreshTurnMusic(combat = game.combat) {
-	if (!combat || !combat.started || getCombatMusicList().length === 0) return;
-	const highestPriority = getHighestPriority(createPriorityList(combat.combatant?.tokenId ?? '', combat));
+	const combatPlaylistCount = getCombatMusicList().length;
+	if (!combat || !combat.started || combatPlaylistCount === 0) {
+		debugLog('refreshTurnMusic skipped', {
+			hasCombat: !!combat,
+			started: combat?.started,
+			combatPlaylistCount,
+		});
+		return;
+	}
+	const priorityList = createPriorityList(combat.combatant?.tokenId ?? '', combat);
+	const highestPriority = getHighestPriority(priorityList);
+	debugLog('refreshTurnMusic candidates', {
+		combatId: combat.id,
+		tokenId: combat.combatant?.tokenId,
+		candidates: [...priorityList.entries()],
+		highestPriority,
+	});
 	if (highestPriority.length === 0) return;
 	const sorted = pick(highestPriority);
+	debugLog('refreshTurnMusic selected', {
+		music: sorted.music,
+		source: sorted.source,
+	});
 	const promise = await updateCombatMusic(combat, sorted.music, sorted.source);
 	Hooks.call('CMMRefreshturnMusic', sorted.music, sorted.source);
 	return promise;

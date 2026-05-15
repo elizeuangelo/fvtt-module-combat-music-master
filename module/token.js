@@ -9,6 +9,7 @@ import {
 	updateCombatMusic,
 } from './music-manager.js';
 import { getSetting } from './settings.js';
+import { debugLog } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -363,7 +364,7 @@ export function getTokenHeaderButtons(sheet, buttons) {
 			onClick: () => new TokenMusicConfig(sheet.token).render(true),
 		});
 	} catch (error) {
-		console.error('Combat Music Master | Error adding actor sheet header buttons:', error);
+		console.error('Combat Music Master: Error adding actor sheet header buttons:', error);
 	}
 }
 
@@ -373,6 +374,14 @@ export function getTokenMusic(token) {
 
 	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
 	const musicList = token.getFlag(MODULE_ID, 'musicList');
+	debugLog('Evaluating token music', {
+		tokenId: token.id,
+		tokenName: token.name,
+		resource: token.getFlag(MODULE_ID, 'resource'),
+		attributeValue: attribute?.value,
+		attributeMax: attribute?.max,
+		musicList,
+	});
 	if (!musicList) return;
 	if (musicList.filter((x) => x[0]).length === 0) return;
 
@@ -382,6 +391,13 @@ export function getTokenMusic(token) {
 	for (let i = musicList.length; i > 0; i--) {
 		const [music, threshold] = musicList[i - 1];
 		if (attrThreshold <= threshold) {
+			debugLog('Token music threshold matched', {
+				tokenId: token.id,
+				tokenName: token.name,
+				attrThreshold,
+				threshold,
+				music,
+			});
 			if (music === '') {
 				const base = getSetting('defaultPlaylist');
 				const combatPlaylists = new Map(
@@ -395,9 +411,17 @@ export function getTokenMusic(token) {
 }
 
 function resourceTracker(actor) {
-	if (!game.combat?.started) return;
+	if (!game.combat?.started) {
+		debugLog('resourceTracker skipped: no active combat', { actorId: actor?.id });
+		return;
+	}
 	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
 	const token = actor.token;
+	debugLog('resourceTracker update', {
+		actorId: actor?.id,
+		tokenId: token?.id,
+		musicToken,
+	});
 	if (!musicToken || !token || musicToken !== token.id) return;
 	const combatant = token.combatant;
 	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
@@ -458,7 +482,7 @@ function injectDirectTokenConfigButton(app, html) {
 				// @ts-ignore
 				await token.update({ [`flags.${MODULE_ID}.active`]: !!event.currentTarget.checked });
 			} catch (error) {
-				console.error('Combat Music Master | Failed to toggle token music active flag:', error);
+				console.error('Combat Music Master: Failed to toggle token music active flag:', error);
 			}
 		});
 
@@ -473,7 +497,7 @@ function injectDirectTokenConfigButton(app, html) {
 		targetGroup.insertAdjacentElement('afterend', activeRow);
 		app.setPosition?.({ height: 'auto' });
 	} catch (error) {
-		console.error('Combat Music Master | Failed to inject direct token config button:', error);
+		console.error('Combat Music Master: Failed to inject direct token config button:', error);
 	}
 }
 

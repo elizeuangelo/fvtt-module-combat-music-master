@@ -2,6 +2,7 @@ import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import { createPriorityList, getCombatMusic, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
 import { getSetting } from './settings.js';
 import { createOption } from './token.js';
+import { debugLog } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -101,6 +102,14 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		const track = playlist?.sounds.get(data.track);
 		const sound = stringifyMusic(track ?? playlist);
 		const priority = data.priority;
+		debugLog('Saving encounter music override', {
+			combatId: game.combat?.id,
+			playlistId: data.playlist,
+			trackId: data.track,
+			sound,
+			priority,
+			started: game.combat?.started,
+		});
 		game.combat
 			?.update({
 				[`flags.${MODULE_ID}`]: {

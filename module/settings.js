@@ -42,6 +42,14 @@ const settings = {
 		default: false,
 		requiresReload: true,
 	},
+	debugLogging: {
+		name: 'Debug Logging',
+		hint: 'Enable verbose Combat Music Master logs in the browser console.',
+		scope: 'world',
+		config: true,
+		type: Boolean,
+		default: false,
+	},
 };
 
 export function getSetting(name) {

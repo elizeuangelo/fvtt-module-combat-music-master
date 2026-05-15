@@ -19,27 +19,36 @@
     display: none;
 }
 
-.cmm-playlists li label {
+.cmm-playlists li:not(:first-child) {
+    border-top: 1px dashed #6666;
+}
+
+li.cmm-inspector-candidate {
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+li.cmm-inspector-candidate.winner {
+    outline: 2px solid gold;
+}
+
+.cmm-pl-chooser li label {
     cursor: pointer;
 }
 
-.cmm-playlists li label:hover:after {
+.cmm-pl-chooser li label:hover:after {
     content: "\f005";
-    font-family: "Font Awesome 6 Pro";
+    font-family: var(--font-awesome);
     font-weight: 400;
     margin-left: 5px;
 }
 
-.cmm-playlists li label.star:after {
+.cmm-pl-chooser li label.star:after {
     content: "\f005";
-    font-family: "Font Awesome 6 Pro";
+    font-family: var(--font-awesome);
     font-weight: 900;
     margin-left: 5px;
     color: darkorange;
-}
-
-.cmm-playlists li:not(:first-child) {
-    border-top: 1px dashed #6666;
 }
 
 .combat-sidebar .combat-tracker-header div.encounter-controls .encounter-title {
@@ -60,7 +69,6 @@
     margin: 0;
     padding: 0;
     border: none;
-
 }
 
 .track-selections header.track-selection {
@@ -97,4 +105,82 @@
 .cmm-direct-active-row,
 .cmm-direct-config-row {
     margin-bottom: 4px;
+}
+.track-selections .track-selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.cmm-track-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cmm-track-toolbar .form-fields {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cmm-tracked-resource-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: center;
+}
+
+.cmm-tracked-resource-row .form-fields {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-button {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.action-button.is-hidden {
+    visibility: hidden;
+}
+
+input[name="threshold"] {
+    width: 100%;
+    box-sizing: border-box;
+}
+.trait-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.trait-rules .trait-rule {
+    display: grid;
+    grid-template-columns: 2fr 3fr 3fr 1fr 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.trait-rules header.trait-rule {
+    font-weight: bold;
+}
+
+.trait-rules .trait-rule select,
+.trait-rules .trait-rule input[type="text"],
+.trait-rules .trait-rule input[type="number"] {
+    width: 100%;
+}
+
+.trait-rules .trait-rule-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }

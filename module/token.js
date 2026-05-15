@@ -363,7 +363,7 @@ export function getTokenHeaderButtons(sheet, buttons) {
 			onClick: () => new TokenMusicConfig(sheet.token).render(true),
 		});
 	} catch (error) {
-		console.error('Combat Music Master | Error adding actor sheet header buttons:', error);
+		console.error('Combat Music Master: Error adding actor sheet header buttons:', error);
 	}
 }
 
@@ -458,7 +458,7 @@ function injectDirectTokenConfigButton(app, html) {
 				// @ts-ignore
 				await token.update({ [`flags.${MODULE_ID}.active`]: !!event.currentTarget.checked });
 			} catch (error) {
-				console.error('Combat Music Master | Failed to toggle token music active flag:', error);
+				console.error('Combat Music Master: Failed to toggle token music active flag:', error);
 			}
 		});
 
@@ -473,7 +473,7 @@ function injectDirectTokenConfigButton(app, html) {
 		targetGroup.insertAdjacentElement('afterend', activeRow);
 		app.setPosition?.({ height: 'auto' });
 	} catch (error) {
-		console.error('Combat Music Master | Failed to inject direct token config button:', error);
+		console.error('Combat Music Master: Failed to inject direct token config button:', error);
 	}
 }
 

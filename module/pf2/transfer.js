@@ -5,14 +5,14 @@ Hooks.on('CMMExport', (data) => {
 	const traitRules = getSetting('traitRules');
 	const resolvedTraitRules = traitRules
 		.map((rule) => {
-			const sound = parseMusic(rule.music).catch(() => null);
-			if (!sound) return null;
-			const playlist = sound.parent ?? sound;
-			const track = playlist && sound !== playlist ? sound : null;
+			const parsedMusic = parseMusic(rule.music);
+			if (!parsedMusic.data) return null;
+			const playlist = parsedMusic.data.playlist;
+			const track = parsedMusic.data.track;
 			return {
 				trait: rule.trait,
 				priority: rule.priority,
-				playlistName: playlist?.name ?? '',
+				playlistName: playlist.name,
 				trackName: track?.name ?? '',
 			};
 		})

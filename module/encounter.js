@@ -53,9 +53,9 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		const playlists = game.playlists.contents
 			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
 			.map((p) => ({ value: p.id, label: p.name }));
-		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music')).catch(() => null);
-		const playlist = selected === null ? undefined : (selected?.parent ?? selected);
-		const track = playlist === selected ? undefined : selected === null ? undefined : selected;
+		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music'));
+		const playlist = selected.data?.playlist;
+		const track = selected.data?.track;
 		const tracks = playlist ? playlist.sounds.contents.map((s) => ({ value: s.id, label: s.name })) : [];
 		const priority = game.combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
 		return {

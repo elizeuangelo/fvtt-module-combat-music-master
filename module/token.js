@@ -79,9 +79,9 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			: token.getBarAttribute('bar1');
 
 		const trackSelection = musicList.map((music, index) => {
-			const parsed = parseMusic(music[0]).catch(() => null);
-			const playlist = parsed === null ? undefined : (parsed?.parent ?? parsed);
-			const track = playlist === parsed ? undefined : parsed === null ? undefined : parsed;
+			const parsed = parseMusic(music[0]);
+			const playlist = parsed.data?.playlist;
+			const track = parsed.data?.track;
 			return {
 				threshold: music[1],
 				disabled: index === 0,

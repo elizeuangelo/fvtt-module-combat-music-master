@@ -87,7 +87,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 				disabled: index === 0,
 				playlistId: playlist?.id ?? '',
 				trackId: track?.id ?? '',
-				error: 'error' in parsed ? parsed.error : '',
+				error: 'error' in parsed ? parsed.message : '',
 				flag: music[0] ?? '',
 			};
 		});
@@ -284,12 +284,14 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 	#onPreviewTokenRule() {
 		const token = this.token;
 		const currentRuleMusic = getTokenMusic(token);
-		const parsed = currentRuleMusic ? parseMusic(currentRuleMusic) : { error: 'empty' };
-		if ('error' in parsed) {
+		const parsed = parseMusic(currentRuleMusic);
+		if (!parsed.data) {
 			ui.notifications.warn(`Combat Music Master: No valid music selected for "${token.name}".`);
 			return;
 		}
-		const musicName = parsed.documentName === 'PlaylistSound' ? `${parsed.parent.name} / ${parsed.name}` : parsed.name;
+		const musicName = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
 		ui.notifications.info(`Combat Music Master Preview: ${token.name} -> ${musicName}`);
 	}
 
@@ -299,15 +301,17 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (Number.isNaN(index)) return;
 		const data = this.#getTrackData();
 		const music = data[index]?.[0];
-		const parsed = parseMusic(music ?? '');
-		if ('error' in parsed) {
+		const parsed = parseMusic(music);
+		if (!parsed.data) {
 			ui.notifications.warn(`Combat Music Master: This row has no valid track/playlist (${parsed.error}).`);
 			return;
 		}
-		const label = parsed.documentName === 'PlaylistSound' ? `${parsed.parent.name} / ${parsed.name}` : parsed.name;
+		const label = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
 		ui.notifications.info(`Combat Music Master Row Preview: ${label}`);
-		if (parsed.documentName === 'PlaylistSound') parsed.parent.playSound(parsed);
-		else parsed.playAll();
+		if (parsed.data.track) parsed.data.playlist.playSound(parsed.data.track);
+		else parsed.data.playlist.playAll();
 	}
 
 	async #onStopRow(event) {
@@ -316,10 +320,10 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (Number.isNaN(index)) return;
 		const data = this.#getTrackData();
 		const music = data[index]?.[0];
-		const parsed = parseMusic(music ?? '');
-		if ('error' in parsed) return;
-		if (parsed.documentName === 'PlaylistSound') await parsed.parent.stopSound(parsed);
-		else await parsed.stopAll();
+		const parsed = parseMusic(music);
+		if (!parsed.data) return;
+		if (parsed.data.track) parsed.data.playlist.stopSound(parsed.data.track);
+		else parsed.data.playlist.stopAll();
 	}
 
 	async #onApplyToControlled() {

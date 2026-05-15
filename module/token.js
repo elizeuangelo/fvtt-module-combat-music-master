@@ -1,14 +1,14 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
+import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
-	parseMusic,
-	updateCombatMusic,
-	setTokenConfig,
-	stringifyMusic,
 	getCombatMusic,
 	getHighestPriority,
+	parseMusic,
 	pick,
+	stringifyMusic,
+	updateCombatMusic,
 } from './music-manager.js';
-import { MODULE_ID, getSetting } from './settings.js';
+import { getSetting } from './settings.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -47,7 +47,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		return {
 			musicList: token.getFlag(MODULE_ID, 'musicList') ?? [['', 100]],
 			resource: token.getFlag(MODULE_ID, 'resource'),
-			priority: token.getFlag(MODULE_ID, 'priority') ?? 10,
+			priority: token.getFlag(MODULE_ID, 'priority') ?? DEFAULT_TOKEN_MUSIC_PRIORITY,
 			active: token.getFlag(MODULE_ID, 'active') ?? false,
 			turnOnly: token.getFlag(MODULE_ID, 'turnOnly') ?? false,
 		};
@@ -55,7 +55,8 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_prepareSubmitData() {
 		const active = this.element.querySelector('input[name="music-active"]').checked;
-		const priority = parseInt(this.element.querySelector('input[name="priority"]').value) || 10;
+		const priority =
+			parseInt(this.element.querySelector('input[name="priority"]').value) || DEFAULT_TOKEN_MUSIC_PRIORITY;
 		const turnOnly = this.element.querySelector('input[name="turn-only"]').checked;
 		const resource = this.element.querySelector('select[name="tracked-resource"]').value;
 		const musicList = this.#getTrackData();
@@ -74,12 +75,12 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 		const trackedResource = resource
 			? token.getBarAttribute?.('tracked-resource', {
 					alternative: resource,
-			  })
+				})
 			: token.getBarAttribute('bar1');
 
 		const trackSelection = musicList.map((music, index) => {
 			const parsed = parseMusic(music[0]);
-			const playlist = 'error' in parsed ? undefined : parsed?.parent ?? parsed;
+			const playlist = 'error' in parsed ? undefined : (parsed?.parent ?? parsed);
 			const track = playlist === parsed ? undefined : 'error' in parsed ? undefined : parsed;
 			return {
 				threshold: music[1],
@@ -225,7 +226,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/**
 	 * Handle changing the attribute bar in the drop-down selector to update the default current and max value
-	 * @param {Event} event  The select input change event
+	 * @param {Event & { target: HTMLInputElement }} event  The select input change event
 	 */
 	#onChangeBar(event) {
 		const form = this.form;
@@ -362,17 +363,6 @@ export function getTokenHeaderButtons(sheet, buttons) {
 	}
 }
 
-function resourceTracker(actor) {
-	if (!game.combat?.started) return;
-	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
-	const token = actor.token;
-	if (!musicToken || !token || musicToken !== token.id) return;
-	const combatant = token.combatant;
-	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
-	const music = getTokenMusic(token);
-	if (music) updateCombatMusic(combatant.combat, music);
-}
-
 export function getTokenMusic(token) {
 	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
@@ -390,13 +380,24 @@ export function getTokenMusic(token) {
 			if (music === '') {
 				const base = getSetting('defaultPlaylist');
 				const combatPlaylists = new Map(
-					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)])
+					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]),
 				);
 				return pick(getHighestPriority(combatPlaylists)).music;
 			}
 			return music;
 		}
 	}
+}
+
+function resourceTracker(actor) {
+	if (!game.combat?.started) return;
+	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
+	const token = actor.token;
+	if (!musicToken || !token || musicToken !== token.id) return;
+	const combatant = token.combatant;
+	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
+	const music = getTokenMusic(token);
+	if (music) updateCombatMusic(combatant.combat, music);
 }
 
 Hooks.once('setup', () => {

@@ -25,14 +25,14 @@
 
 .cmm-playlists li label:hover:after {
     content: "\f005";
-    font-family: "Font Awesome 6 Pro";
+    font-family: var(--font-awesome);
     font-weight: 400;
     margin-left: 5px;
 }
 
 .cmm-playlists li label.star:after {
     content: "\f005";
-    font-family: "Font Awesome 6 Pro";
+    font-family: var(--font-awesome);
     font-weight: 900;
     margin-left: 5px;
     color: darkorange;
@@ -60,7 +60,6 @@
     margin: 0;
     padding: 0;
     border: none;
-
 }
 
 .track-selections header.track-selection {
@@ -130,4 +129,35 @@
 input[name="threshold"] {
     width: 100%;
     box-sizing: border-box;
+}
+.trait-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.trait-rules .trait-rule {
+    display: grid;
+    grid-template-columns: 2fr 3fr 3fr 1fr 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.trait-rules header.trait-rule {
+    font-weight: bold;
+}
+
+.trait-rules .trait-rule select,
+.trait-rules .trait-rule input[type="text"],
+.trait-rules .trait-rule input[type="number"] {
+    width: 100%;
+}
+
+.trait-rules .trait-rule-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }

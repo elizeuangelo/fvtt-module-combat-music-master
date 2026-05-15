@@ -1,5 +1,5 @@
-import { parseMusic, stringifyMusic, updateTurnMusic } from './music-manager.js';
-import { MODULE_ID } from './settings.js';
+import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
+import { parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
 import { createOption } from './token.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -42,16 +42,22 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 			initial: '',
 			blank: true,
 		}),
+		priority: new foundry.data.fields.NumberField({
+			name: 'priority',
+			label: 'Priority',
+			initial: DEFAULT_ENCOUNTER_MUSIC_PRIORITY,
+		}),
 	});
 
 	async _prepareContext() {
 		const playlists = game.playlists.contents
 			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
 			.map((p) => ({ value: p.id, label: p.name }));
-		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'overrideMusic'));
-		const playlist = 'error' in selected ? undefined : selected?.parent ?? selected;
+		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music'));
+		const playlist = 'error' in selected ? undefined : (selected?.parent ?? selected);
 		const track = playlist === selected ? undefined : 'error' in selected ? undefined : selected;
 		const tracks = playlist ? playlist.sounds.contents.map((s) => ({ value: s.id, label: s.name })) : [];
+		const priority = game.combat.getFlag(MODULE_ID, 'priority') ?? DEFAULT_ENCOUNTER_MUSIC_PRIORITY;
 		return {
 			rootId: this.id,
 			playlists,
@@ -59,6 +65,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 			selectedTrack: track?.id,
 			fields: CombatTrackerMusicManager.#schema.fields,
 			tracks,
+			priority,
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
 	}
@@ -92,12 +99,16 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 		const playlist = game.playlists.get(data.playlist);
 		const track = playlist?.sounds.get(data.track);
 		const sound = stringifyMusic(track ?? playlist);
+		const priority = data.priority;
 		game.combat
 			?.update({
-				[`flags.${MODULE_ID}.overrideMusic`]: sound,
+				[`flags.${MODULE_ID}`]: {
+					music: sound,
+					priority,
+				},
 			})
 			.then(() => {
-				if (game.combat.started) updateTurnMusic(game.combat);
+				if (game.combat.started) refreshTurnMusic(game.combat);
 			});
 	}
 }

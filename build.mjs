@@ -1,10 +1,9 @@
 // Usage: node build.mjs
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { exec } from 'child_process';
+import fs from 'fs';
+import path, { dirname } from 'path';
 import { createInterface } from 'readline';
+import { fileURLToPath } from 'url';
 
 const env = parseEnv();
 const manifestFile = JSON.parse(fs.readFileSync('./module.json', 'utf-8'));

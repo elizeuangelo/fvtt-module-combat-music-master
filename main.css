@@ -92,6 +92,20 @@ li.cmm-inspector-candidate.winner {
     justify-content: flex-end;
 }
 
+.token-config .form-group select {
+    height: var(--form-field-height, 28px);
+    border-radius: 3px;
+}
+
+.cmm-direct-config-btn {
+    height: var(--form-field-height, 28px);
+    cursor: pointer;
+}
+
+.cmm-direct-active-row,
+.cmm-direct-config-row {
+    margin-bottom: 4px;
+}
 .track-selections .track-selection-controls {
     display: flex;
     align-items: center;

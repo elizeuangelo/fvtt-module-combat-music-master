@@ -412,3 +412,69 @@ Hooks.once('setup', () => {
 	}
 });
 Hooks.on('getHeaderControlsTokenApplication', getTokenHeaderButtons);
+
+function getConfigToken(app) {
+	return app?.token ?? app?.object ?? app?.document ?? null;
+}
+
+function injectDirectTokenConfigButton(app, html) {
+	try {
+		if (!game.user.isGM) return;
+		const token = getConfigToken(app);
+		if (!token) return;
+		if (html.querySelector('.cmm-direct-config-row') || html.querySelector('.cmm-direct-active-row')) return;
+
+		const targetGroup =
+			html.querySelector('[name="name"]')?.closest('.form-group') ??
+			html.querySelector('.tab .form-group') ??
+			html.querySelector('.tab');
+		if (!targetGroup) return;
+
+		const activeRow = document.createElement('div');
+		activeRow.className = 'form-group cmm-direct-active-row';
+		activeRow.innerHTML = `
+			<label>Use Token Music</label>
+			<div class="form-fields">
+				<input type="checkbox" class="cmm-direct-active-toggle" ${token.getFlag(MODULE_ID, 'active') ? 'checked' : ''} />
+			</div>
+			<p class="hint">Enable token-specific combat music rules for this token.</p>
+		`;
+
+		const configRow = document.createElement('div');
+		configRow.className = 'form-group cmm-direct-config-row';
+		configRow.innerHTML = `
+			<label>Combat Music</label>
+			<div class="form-fields">
+				<button type="button" class="cmm-direct-config-btn">
+					<i class="fas fa-music"></i> Open Combat Music
+				</button>
+			</div>
+			<p class="hint">Direct access to token combat music configuration.</p>
+		`;
+
+		const toggle = activeRow.querySelector('.cmm-direct-active-toggle');
+		toggle?.addEventListener('change', async (event) => {
+			try {
+				await token.update({ [`flags.${MODULE_ID}.active`]: !!event.currentTarget.checked });
+			} catch (error) {
+				console.error('Combat Music Master | Failed to toggle token music active flag:', error);
+			}
+		});
+
+		const button = configRow.querySelector('.cmm-direct-config-btn');
+		button?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			new TokenMusicConfig(token).render(true);
+		});
+
+		targetGroup.insertAdjacentElement('afterend', configRow);
+		targetGroup.insertAdjacentElement('afterend', activeRow);
+		app.setPosition?.({ height: 'auto' });
+	} catch (error) {
+		console.error('Combat Music Master | Failed to inject direct token config button:', error);
+	}
+}
+
+Hooks.on('renderTokenConfig', injectDirectTokenConfigButton);
+Hooks.on('renderPrototypeTokenConfig', injectDirectTokenConfigButton);

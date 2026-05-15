@@ -40,6 +40,7 @@ const settings = {
 		config: true,
 		type: Boolean,
 		default: false,
+		requiresReload: true,
 	},
 };
 

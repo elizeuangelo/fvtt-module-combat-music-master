@@ -1,5 +1,5 @@
 import { MODULE_ID } from '../constants.js';
-import { getCombatMusic, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
+import { getCombatMusicList, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
 import { getSetting, setSetting } from '../settings.js';
 
 const DEFAULT_TRAIT_MUSIC_PRIORITY = 15;
@@ -44,7 +44,7 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#populatePlaylistOptions(context) {
-		const combatPlaylists = getCombatMusic();
+		const combatPlaylists = getCombatMusicList();
 		this.element.querySelectorAll('fieldset.trait-rule').forEach((fieldset, index) => {
 			const rule = context.rules[index];
 			if (!rule) return;

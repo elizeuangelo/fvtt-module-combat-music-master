@@ -1,5 +1,5 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
-import { explainCombatMusicDecision, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
+import { createPriorityList, getCombatMusic, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
 import { getSetting } from './settings.js';
 import { createOption } from './token.js';
 
@@ -119,7 +119,7 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 		id: 'combat-master-inspector',
 		tag: 'section',
 		window: {
-			contentClasses: ['standard-form', 'cmm-inspector'],
+			contentClasses: ['cmm-inspector'],
 			icon: 'fa-solid fa-waveform-lines',
 			title: 'Combat Music Inspector',
 		},
@@ -130,25 +130,82 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 		body: { template: 'modules/combat-music-master/templates/inspector.hbs', scrollable: [''] },
 	};
 
+	_onRender(context, options) {
+		super._onRender(context, options);
+		this.setupEventListeners();
+	}
+
+	setupEventListeners() {
+		// Refresh button
+		this.element.querySelector('[data-action="refresh"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#refresh();
+		});
+	}
+
+	#refresh() {
+		this.render(true);
+	}
+
+	explainCombatMusicDecision(combat = game.combat) {
+		if (!combat?.started) {
+			return {
+				started: false,
+				reason: 'Combat is not started.',
+				music: '',
+				winner: '',
+				candidates: [],
+			};
+		}
+
+		const candidatesMap = createPriorityList(combat.combatant?.tokenId, combat);
+		const candidates = [...candidatesMap.entries()]
+			.map(([choice, priority]) => ({
+				token: choice.token,
+				music: choice.music,
+				priority,
+				parsed: parseMusic(choice.music),
+				source: choice.source,
+			}))
+			.sort((a, b) => b.priority - a.priority);
+		const winner = getCombatMusic(combat);
+		const winnerSource = combat.getFlag(MODULE_ID, 'source');
+		return {
+			started: true,
+			reason: 'Winner chosen from highest-priority candidates.',
+			winner,
+			winnerSource,
+			candidates,
+		};
+	}
+
 	_prepareContext() {
-		const decision = explainCombatMusicDecision(game.combat);
+		const decision = this.explainCombatMusicDecision(game.combat);
 		const winner = parseMusic(decision.winner);
-		const winnerLabel = !decision.winner.data
-			? decision.winner || '(none)'
-			: winner.data.track
-				? `${winner.data.playlist} / ${winner.data.track.name}`
-				: winner.data.playlist.name;
+		let winnerLabel =
+			!decision.winner || !winner.data
+				? decision.winner || '(none)'
+				: winner.data.track
+					? `${winner.data.playlist.name} / ${winner.data.track.name}`
+					: winner.data.playlist.name;
+		winnerLabel += ` (${decision.winnerSource})`;
+		const candidates = (decision.candidates ?? []).map((c) => {
+			const parsed = c.parsed;
+			if (!parsed.data) return { ...c, label: `${c.music} (${parsed.error ?? 'empty'})` };
+			const label = parsed.data.track
+				? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+				: parsed.data.playlist.name;
+			const isWinner =
+				decision.winnerSource === c.source &&
+				parsed.data.playlist === winner.data.playlist &&
+				parsed.data.track === winner.data.track;
+			return { ...c, label, source: c.source, isWinner };
+		});
 		return {
 			...decision,
 			winnerLabel,
-			candidates: (decision.candidates ?? []).map((c) => {
-				const parsed = c.parsed;
-				if (!parsed.data) return { ...c, label: `${c.music} (${parsed.error ?? 'empty'})` };
-				const label = parsed.data.track
-					? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
-					: parsed.data.track.name;
-				return { ...c, label };
-			}),
+			candidates,
 		};
 	}
 }
@@ -156,19 +213,19 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 Hooks.on('getCombatContextOptions', addButtonToContextMenu);
 function addButtonToContextMenu(_combatTracker, options) {
 	options.unshift({
-		name: 'Set Encounter Music',
+		label: 'Set Encounter Music',
 		icon: '<i class="fas fa-music"></i>',
-		condition: () => game.user.isGM,
-		callback: () => {
+		visible: () => game.user.isGM,
+		onClick: () => {
 			new CombatTrackerMusicManager().render(true);
 		},
 	});
 	if (getSetting('enableInspector')) {
 		options.unshift({
-			name: 'Inspect Combat Music Decision',
+			label: 'Inspect Combat Music Decision',
 			icon: '<i class="fas fa-waveform-lines"></i>',
-			condition: () => game.user.isGM,
-			callback: () => {
+			visible: () => game.user.isGM,
+			onClick: () => {
 				new CombatMusicInspector().render(true);
 			},
 		});

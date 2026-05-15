@@ -1,28 +1,22 @@
 <div class="tab flexcol cmm-inspector">
-	<p class="instructions cmm-inspector-summary">{{reason}}</p>
-	<div class="form-group cmm-inspector-row">
-		<label>Winner</label>
-		<div class="form-fields">
-			<input type="text" value="{{winnerLabel}}" disabled />
-		</div>
+	<header>
+		<h3 class="cmm-inspector-heading">Candidates</h3>
+		<p class="instructions cmm-inspector-summary">{{reason}}</p>
+	</header>
+	<div class="cmm-inspector-actions">
+		<button type="button" data-action="refresh">
+			<i class="fa-solid fa-arrows-rotate"></i>Refresh
+		</button>
 	</div>
-	{{#if overrideMusic}}
-	<div class="form-group cmm-inspector-row">
-		<label>Encounter Override</label>
-		<div class="form-fields">
-			<input type="text" value="{{overrideMusic}}" disabled />
-		</div>
-	</div>
-	{{/if}}
-
-	<hr />
-	<h3 class="cmm-inspector-heading">Candidates</h3>
 	{{#if candidates.length}}
 	<ul class="cmm-playlists cmm-inspector-candidates">
 		{{#each candidates}}
-		<li class="cmm-inspector-candidate">
+		<li class="cmm-inspector-candidate {{#if isWinner}}winner{{/if}}">
 			<div class="cmm-inspector-candidate-main">
-				<label>{{label}}</label>
+				<label>
+					{{label}}
+					({{source}})
+				</label>
 			</div>
 			<div class="cmm-inspector-candidate-meta">
 				<span class="cmm-badge">P{{priority}}</span>

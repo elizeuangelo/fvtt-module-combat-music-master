@@ -1,7 +1,7 @@
 // TODO: Remove ALL jQuery from hooks as they now use HTMLElements
 import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
-	getCombatMusic,
+	getCombatMusicList,
 	getHighestPriority,
 	parseMusic,
 	pick,
@@ -142,7 +142,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#populatePlaylistOptions(context) {
-		const combatPlaylists = getCombatMusic();
+		const combatPlaylists = getCombatMusicList();
 		const playlistSelects = this.element.querySelectorAll('select[name="playlist"]');
 
 		playlistSelects.forEach((select, index) => {
@@ -384,7 +384,7 @@ export function getTokenMusic(token) {
 			if (music === '') {
 				const base = getSetting('defaultPlaylist');
 				const combatPlaylists = new Map(
-					getCombatMusic().map((p) => [{ token: '', music: p.id }, +(p.id === base)]),
+					getCombatMusicList().map((p) => [{ token: '', music: p.id }, +(p.id === base)]),
 				);
 				return pick(getHighestPriority(combatPlaylists)).music;
 			}

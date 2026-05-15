@@ -70,7 +70,7 @@ export async function updateCombatMusic(combat, music, token) {
 	const oldSound = parseMusic(oldMusicString).catch(() => null);
 
 	if (oldMusicString !== music) {
-		if (!('error' in oldSound)) {
+		if (oldSound) {
 			if (getSetting('pauseTrack') && oldSound.documentName === 'PlaylistSound') await pause(oldSound);
 			else {
 				if (oldSound.documentName === 'PlaylistSound') await oldSound.parent.stopSound(oldSound);

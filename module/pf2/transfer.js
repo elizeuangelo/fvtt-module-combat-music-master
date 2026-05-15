@@ -3,17 +3,20 @@ import { getSetting, setSetting } from '../settings.js';
 
 Hooks.on('CMMExport', (data) => {
 	const traitRules = getSetting('traitRules');
-	const resolvedTraitRules = traitRules.map((rule) => {
-		const sound = parseMusic(rule.music);
-		const playlist = 'error' in sound ? null : (sound.parent ?? sound);
-		const track = playlist && sound !== playlist ? sound : null;
-		return {
-			trait: rule.trait,
-			priority: rule.priority,
-			playlistName: playlist?.name ?? '',
-			trackName: track?.name ?? '',
-		};
-	});
+	const resolvedTraitRules = traitRules
+		.map((rule) => {
+			const sound = parseMusic(rule.music).catch(() => null);
+			if (!sound) return null;
+			const playlist = sound.parent ?? sound;
+			const track = playlist && sound !== playlist ? sound : null;
+			return {
+				trait: rule.trait,
+				priority: rule.priority,
+				playlistName: playlist?.name ?? '',
+				trackName: track?.name ?? '',
+			};
+		})
+		.filter(Boolean);
 	data.traitRules = resolvedTraitRules;
 });
 

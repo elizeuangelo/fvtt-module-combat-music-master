@@ -9,7 +9,6 @@ import {
 	updateCombatMusic,
 } from './music-manager.js';
 import { getSetting } from './settings.js';
-import { debounce } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -317,12 +316,10 @@ function resourceTracker(actor) {
 	if (music) updateCombatMusic(combatant.combat, music);
 }
 
-const debouncedResourceTracker = debounce(resourceTracker);
-
 Hooks.once('setup', () => {
 	if (game.user.isGM) {
-		Hooks.on('updateActor', debouncedResourceTracker);
-		Hooks.on('updateToken', (token) => debouncedResourceTracker(token.actor));
+		Hooks.on('updateActor', resourceTracker);
+		Hooks.on('updateToken', (token) => resourceTracker(token.actor));
 	}
 });
 Hooks.on('getHeaderControlsTokenApplication', getTokenHeaderButtons);

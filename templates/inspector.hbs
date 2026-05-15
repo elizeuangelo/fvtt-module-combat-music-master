@@ -1,0 +1,31 @@
+<div class="tab flexcol cmm-inspector">
+	<header>
+		<h3 class="cmm-inspector-heading">Candidates</h3>
+		<p class="instructions cmm-inspector-summary">{{reason}}</p>
+	</header>
+	<div class="cmm-inspector-actions">
+		<button type="button" data-action="refresh">
+			<i class="fa-solid fa-arrows-rotate"></i>Refresh
+		</button>
+	</div>
+	{{#if candidates.length}}
+	<ul class="cmm-playlists cmm-inspector-candidates">
+		{{#each candidates}}
+		<li class="cmm-inspector-candidate {{#if isWinner}}winner{{/if}}">
+			<div class="cmm-inspector-candidate-main">
+				<label>
+					{{label}}
+					({{source}})
+				</label>
+			</div>
+			<div class="cmm-inspector-candidate-meta">
+				<span class="cmm-badge">P{{priority}}</span>
+				{{#if token}}<span class="cmm-badge">Token {{token}}</span>{{/if}}
+			</div>
+		</li>
+		{{/each}}
+	</ul>
+	{{else}}
+	<p class="hint">No candidates available.</p>
+	{{/if}}
+</div>

@@ -19,27 +19,42 @@
     display: none;
 }
 
-.cmm-playlists li label {
+.cmm-playlists li:not(:first-child) {
+    border-top: 1px dashed #6666;
+}
+
+li.cmm-inspector-candidate {
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+li.cmm-inspector-candidate.winner {
+    outline: 2px solid gold;
+}
+
+.cmm-inspector-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.cmm-pl-chooser li label {
     cursor: pointer;
 }
 
-.cmm-playlists li label:hover:after {
+.cmm-pl-chooser li label:hover:after {
     content: "\f005";
     font-family: var(--font-awesome);
     font-weight: 400;
     margin-left: 5px;
 }
 
-.cmm-playlists li label.star:after {
+.cmm-pl-chooser li label.star:after {
     content: "\f005";
     font-family: var(--font-awesome);
     font-weight: 900;
     margin-left: 5px;
     color: darkorange;
-}
-
-.cmm-playlists li:not(:first-child) {
-    border-top: 1px dashed #6666;
 }
 
 .combat-sidebar .combat-tracker-header div.encounter-controls .encounter-title {
@@ -112,6 +127,8 @@
     align-items: center;
     gap: 0.5rem;
 }
+
+.cmm-inspector-candidates {}
 
 .action-button {
     width: 28px;

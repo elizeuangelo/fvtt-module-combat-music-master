@@ -87,6 +87,8 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 				disabled: index === 0,
 				playlistId: playlist?.id ?? '',
 				trackId: track?.id ?? '',
+				error: 'error' in parsed ? parsed.message : '',
+				flag: music[0] ?? '',
 			};
 		});
 
@@ -108,6 +110,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			musicActive: data.active,
 			turnOnly: data.turnOnly,
 			isDefault: false,
+			hasInvalidEntries: trackSelection.some((s) => !!s.error),
 			buttons: [{ type: 'submit', icon: 'fa-solid fa-floppy-disk', label: 'SETTINGS.Save' }],
 		};
 	}
@@ -182,6 +185,22 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			});
 		});
 
+		this.element.querySelectorAll('[data-action="previewRow"]').forEach((button) => {
+			button.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.#onPreviewRow(event);
+			});
+		});
+
+		this.element.querySelectorAll('[data-action="stopRow"]').forEach((button) => {
+			button.addEventListener('click', (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				this.#onStopRow(event);
+			});
+		});
+
 		// Playlist change handlers
 		this.element.querySelectorAll('select[name="playlist"]').forEach((select) => {
 			select.addEventListener('change', this.#onPlaylistChange.bind(this));
@@ -189,8 +208,20 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		// Resource change handler
 		this.element
-			.querySelector('select[name=tracked-resource')
-			.addEventListener('change', this.#onChangeBar.bind(this));
+			.querySelector('select[name="tracked-resource"]')
+			?.addEventListener('change', this.#onChangeBar.bind(this));
+
+		this.element.querySelector('[data-action="previewTokenRule"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#onPreviewTokenRule();
+		});
+
+		this.element.querySelector('[data-action="applyToControlled"]')?.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this.#onApplyToControlled();
+		});
 	}
 
 	/**
@@ -248,6 +279,63 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		this._previewChanges({ musicList });
 		this.render(true);
+	}
+
+	#onPreviewTokenRule() {
+		const token = this.token;
+		const currentRuleMusic = getTokenMusic(token);
+		const parsed = parseMusic(currentRuleMusic);
+		if (!parsed.data) {
+			ui.notifications.warn(`Combat Music Master: No valid music selected for "${token.name}".`);
+			return;
+		}
+		const musicName = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
+		ui.notifications.info(`Combat Music Master Preview: ${token.name} -> ${musicName}`);
+	}
+
+	#onPreviewRow(event) {
+		const row = event.target.closest('.track-selection');
+		const index = Number(row?.dataset?.index);
+		if (Number.isNaN(index)) return;
+		const data = this.#getTrackData();
+		const music = data[index]?.[0];
+		const parsed = parseMusic(music);
+		if (!parsed.data) {
+			ui.notifications.warn(`Combat Music Master: This row has no valid track/playlist (${parsed.error}).`);
+			return;
+		}
+		const label = parsed.data.track
+			? `${parsed.data.playlist.name} / ${parsed.data.track.name}`
+			: parsed.data.playlist.name;
+		ui.notifications.info(`Combat Music Master Row Preview: ${label}`);
+		if (parsed.data.track) parsed.data.playlist.playSound(parsed.data.track);
+		else parsed.data.playlist.playAll();
+	}
+
+	async #onStopRow(event) {
+		const row = event.target.closest('.track-selection');
+		const index = Number(row?.dataset?.index);
+		if (Number.isNaN(index)) return;
+		const data = this.#getTrackData();
+		const music = data[index]?.[0];
+		const parsed = parseMusic(music);
+		if (!parsed.data) return;
+		if (parsed.data.track) parsed.data.playlist.stopSound(parsed.data.track);
+		else parsed.data.playlist.stopAll();
+	}
+
+	async #onApplyToControlled() {
+		const controlled = canvas?.tokens?.controlled?.map((t) => t.document).filter(Boolean) ?? [];
+		if (controlled.length <= 1) {
+			ui.notifications.warn('Combat Music Master: Select at least two tokens to batch apply settings.');
+			return;
+		}
+		const data = this._prepareSubmitData();
+		const targets = controlled.filter((doc) => doc.id !== this.token.id);
+		await Promise.all(targets.map((token) => token.update({ [`flags.${MODULE_ID}`]: data })));
+		ui.notifications.info(`Combat Music Master: Applied settings to ${targets.length} controlled token(s).`);
 	}
 
 	/**

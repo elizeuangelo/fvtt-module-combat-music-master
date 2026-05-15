@@ -83,6 +83,53 @@
     justify-content: flex-end;
 }
 
+.track-selections .track-selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.cmm-track-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cmm-track-toolbar .form-fields {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cmm-tracked-resource-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: center;
+}
+
+.cmm-tracked-resource-row .form-fields {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-button {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.action-button.is-hidden {
+    visibility: hidden;
+}
+
+input[name="threshold"] {
+    width: 100%;
+    box-sizing: border-box;
+}
 .trait-rules {
     display: flex;
     flex-direction: column;

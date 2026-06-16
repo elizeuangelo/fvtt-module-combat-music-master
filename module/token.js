@@ -2,8 +2,8 @@
 import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
 	getCombatMusicList,
-	getSelectablePlaylists,
 	getHighestPriority,
+	getSelectablePlaylists,
 	parseMusic,
 	pick,
 	stringifyMusic,
@@ -96,9 +96,9 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		const usesTrackableAttributes = !foundry.utils.isEmpty(CONFIG.Actor.trackableAttributes);
 		const attributeSource =
-			this.actor?.system instanceof foundry.abstract.DataModel && usesTrackableAttributes
-				? this.actor?.type
-				: this.actor?.system;
+			token.actor?.system instanceof foundry.abstract.DataModel && usesTrackableAttributes
+				? token.actor?.type
+				: token.actor?.system;
 		const TokenDocument = foundry.utils.getDocumentClass('Token');
 		const attributes = TokenDocument.getTrackedAttributes(attributeSource);
 		const barAttributes = TokenDocument.getTrackedAttributeChoices(attributes);
@@ -373,12 +373,15 @@ export function getTokenMusic(token) {
 	const active = token.getFlag(MODULE_ID, 'active');
 	if (!active) return;
 
-	const attribute = token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1');
+	const resource = token.getFlag(MODULE_ID, 'resource');
+	const attribute = resource
+		? token.getBarAttribute('', { alternative: resource })
+		: (token.actor?.system?.attributes?.hp ?? token.getBarAttribute('bar1'));
 	const musicList = token.getFlag(MODULE_ID, 'musicList');
 	debugLog('Evaluating token music', {
 		tokenId: token.id,
 		tokenName: token.name,
-		resource: token.getFlag(MODULE_ID, 'resource'),
+		resource,
 		attributeValue: attribute?.value,
 		attributeMax: attribute?.max,
 		musicList,
@@ -386,8 +389,8 @@ export function getTokenMusic(token) {
 	if (!musicList) return;
 	if (musicList.filter((x) => x[0]).length === 0) return;
 
-	if (attribute.value > attribute.max) attribute.value = attribute.max;
-	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * attribute.value) / attribute.max;
+	const value = Math.min(attribute?.value ?? 0, attribute?.max ?? 0);
+	const attrThreshold = attribute === undefined || !attribute.max ? 100 : (100 * value) / attribute.max;
 
 	for (let i = musicList.length; i > 0; i--) {
 		const [music, threshold] = musicList[i - 1];
@@ -420,18 +423,16 @@ function resourceTracker(actor) {
 		debugLog('resourceTracker skipped: no active combat', { actorId: actor?.id });
 		return;
 	}
-	const musicToken = game.combat.getFlag(MODULE_ID, 'token');
+	const source = game.combat.getFlag(MODULE_ID, 'source');
 	const token = actor.token;
 	debugLog('resourceTracker update', {
 		actorId: actor?.id,
 		tokenId: token?.id,
-		musicToken,
+		source,
 	});
-	if (!musicToken || !token || musicToken !== token.id) return;
-	const combatant = token.combatant;
-	if (combatant.combat.getFlag(MODULE_ID, 'token') !== token.id) return;
+	if (!source || !token || source !== token.id) return;
 	const music = getTokenMusic(token);
-	if (music) updateCombatMusic(combatant.combat, music);
+	if (music) updateCombatMusic(game.combat, music, source);
 }
 
 Hooks.once('setup', () => {

@@ -22,6 +22,12 @@ function pauseAmbienceMusic() {
 	);
 }
 
+async function startCombatMusic(combat = game.combat) {
+	pauseAmbienceMusic();
+	await refreshTurnMusic(combat);
+	Hooks.callAll('CMMRefreshInspector');
+}
+
 function getCombatPausedMusics(combat) {
 	return [...createPriorityList(null, combat).keys()]
 		.map(({ music }) => parseMusic(music).data?.sound)
@@ -317,7 +323,7 @@ Hooks.once('setup', () => {
 	if (foundryModule) foundryModule.api = api;
 
 	if (game.user.isGM) {
-		Hooks.on('combatStart', pauseAmbienceMusic);
+		Hooks.on('combatStart', startCombatMusic);
 		Hooks.on('preDeleteCombat', finishCombatMusic);
 		Hooks.on('updateCombat', finishCombatMusicIfUnstarted);
 		Hooks.on('combatTurnChange', debouncedRefreshTurnMusic);

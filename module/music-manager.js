@@ -120,7 +120,8 @@ export async function updateCombatMusic(combat, music, source) {
 		if (parsedPreviousMusic.data) {
 			if (getSetting('pauseTrack') && parsedPreviousMusic.data.track) await pause(parsedPreviousMusic.data.track);
 			else {
-				if (parsedPreviousMusic.data.track) await parsedPreviousMusic.data.track.stopSound(parsedPreviousMusic);
+				if (parsedPreviousMusic.data.track)
+					await parsedPreviousMusic.data.playlist.stopSound(parsedPreviousMusic.data.track);
 				else await parsedPreviousMusic.data.playlist.stopAll();
 			}
 		}

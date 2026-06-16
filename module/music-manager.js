@@ -244,6 +244,10 @@ export function getCombatMusicList() {
 	return game.playlists.contents.filter((p) => p.getFlag(MODULE_ID, 'combat'));
 }
 
+export function getSelectablePlaylists() {
+	return getSetting('allowAllPlaylists') ? game.playlists.contents : getCombatMusicList();
+}
+
 export async function refreshTurnMusic(combat = game.combat) {
 	if (!isModuleEnabled()) {
 		debugLog('refreshTurnMusic skipped: module disabled', { combatId: combat?.id });

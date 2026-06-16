@@ -1,5 +1,5 @@
 import { MODULE_ID } from '../constants.js';
-import { getCombatMusicList, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
+import { getSelectablePlaylists, refreshTurnMusic, stringifyMusic } from '../music-manager.js';
 import { getSetting, setSetting } from '../settings.js';
 import { debugLog } from '../utils.js';
 
@@ -45,14 +45,14 @@ class TraitMusicManager extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#populatePlaylistOptions(context) {
-		const combatPlaylists = getCombatMusicList();
+		const selectablePlaylists = getSelectablePlaylists();
 		this.element.querySelectorAll('fieldset.trait-rule').forEach((fieldset, index) => {
 			const rule = context.rules[index];
 			if (!rule) return;
 
 			const playlistSelect = fieldset.querySelector('select[name="playlist"]');
 			playlistSelect.innerHTML = '<option value=""></option>';
-			combatPlaylists.forEach((playlist) => {
+			selectablePlaylists.forEach((playlist) => {
 				const option = document.createElement('option');
 				option.value = playlist.id;
 				option.textContent = playlist.name;

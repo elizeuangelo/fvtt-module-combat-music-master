@@ -2,6 +2,7 @@
 import { DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import {
 	getCombatMusicList,
+	getSelectablePlaylists,
 	getHighestPriority,
 	parseMusic,
 	pick,
@@ -143,7 +144,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#populatePlaylistOptions(context) {
-		const combatPlaylists = getCombatMusicList();
+		const selectablePlaylists = getSelectablePlaylists();
 		const playlistSelects = this.element.querySelectorAll('select[name="playlist"]');
 
 		playlistSelects.forEach((select, index) => {
@@ -151,7 +152,7 @@ class TokenMusicConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (!trackSelection) return;
 
 			select.innerHTML = '<option value=""></option>';
-			combatPlaylists.forEach((playlist) => {
+			selectablePlaylists.forEach((playlist) => {
 				const option = document.createElement('option');
 				option.value = playlist.id;
 				option.textContent = playlist.name;

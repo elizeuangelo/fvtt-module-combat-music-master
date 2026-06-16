@@ -11,6 +11,14 @@ const settings = {
 		default: true,
 		onChange: (enabled) => Hooks.callAll('CMMEnabledChanged', enabled),
 	},
+	allowAllPlaylists: {
+		name: 'Allow All Playlists',
+		hint: 'Allow token, encounter, and trait music selectors to choose from every playlist instead of only combat playlists.',
+		scope: 'world',
+		config: true,
+		type: Boolean,
+		default: false,
+	},
 	defaultPlaylist: {
 		name: 'Default Playlist',
 		hint: 'Select the default playlist, otherwise one will be selected at random. Reload to update the list.',

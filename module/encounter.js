@@ -1,5 +1,12 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
-import { createPriorityList, getCombatMusic, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
+import {
+	createPriorityList,
+	getCombatMusic,
+	getSelectablePlaylists,
+	parseMusic,
+	refreshTurnMusic,
+	stringifyMusic,
+} from './music-manager.js';
 import { getSetting, isModuleEnabled } from './settings.js';
 import { createOption } from './token.js';
 import { debugLog } from './utils.js';
@@ -52,9 +59,7 @@ class CombatTrackerMusicManager extends HandlebarsApplicationMixin(ApplicationV2
 	});
 
 	async _prepareContext() {
-		const playlists = game.playlists.contents
-			.filter((p) => p.getFlag(MODULE_ID, 'combat'))
-			.map((p) => ({ value: p.id, label: p.name }));
+		const playlists = getSelectablePlaylists().map((p) => ({ value: p.id, label: p.name }));
 		const selected = parseMusic(game.combat.getFlag(MODULE_ID, 'music'));
 		const playlist = selected.data?.playlist;
 		const track = selected.data?.track;

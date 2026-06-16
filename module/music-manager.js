@@ -57,6 +57,16 @@ function finishCombatMusic(combat) {
 	return resumeAmbienceMusic(combat);
 }
 
+function finishCombatMusicIfUnstarted(combat) {
+	if (combat.started) return;
+	debugLog('Combat returned to unstarted state; finishing combat music', {
+		combatId: combat.id,
+		round: combat.round,
+		turn: combat.turn,
+	});
+	return finishCombatMusic(combat);
+}
+
 function pause(sound) {
 	const currentTime = sound.sound?.currentTime ?? null;
 	return sound.update({ playing: false, pausedTime: currentTime });
@@ -301,6 +311,7 @@ Hooks.once('setup', () => {
 	if (game.user.isGM) {
 		Hooks.on('combatStart', pauseAmbienceMusic);
 		Hooks.on('preDeleteCombat', finishCombatMusic);
+		Hooks.on('updateCombat', finishCombatMusicIfUnstarted);
 		Hooks.on('combatTurnChange', debouncedRefreshTurnMusic);
 		Hooks.on('deleteCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
 		Hooks.on('createCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));

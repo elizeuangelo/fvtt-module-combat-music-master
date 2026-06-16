@@ -8,7 +8,7 @@ import {
 	stringifyMusic,
 	updateCombatMusic,
 } from './music-manager.js';
-import { getSetting } from './settings.js';
+import { getSetting, isModuleEnabled } from './settings.js';
 import { debugLog } from './utils.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -411,6 +411,10 @@ export function getTokenMusic(token) {
 }
 
 function resourceTracker(actor) {
+	if (!isModuleEnabled()) {
+		debugLog('resourceTracker skipped: module disabled', { actorId: actor?.id });
+		return;
+	}
 	if (!game.combat?.started) {
 		debugLog('resourceTracker skipped: no active combat', { actorId: actor?.id });
 		return;

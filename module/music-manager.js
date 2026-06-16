@@ -1,9 +1,10 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, DEFAULT_TOKEN_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
-import { getSetting, setSetting } from './settings.js';
+import { getSetting, isModuleEnabled, setSetting } from './settings.js';
 import { getTokenMusic } from './token.js';
 import { debounce, debugLog, Err, Ok } from './utils.js';
 
 function pauseAmbienceMusic() {
+	if (!isModuleEnabled()) return;
 	if (getCombatMusicList().length === 0) return;
 	if (!getSetting('pauseAmbience')) return;
 	if (getSetting('pausedAmbienceSounds').length) return;
@@ -51,6 +52,11 @@ function resumeAmbienceMusic(combat) {
 	setSetting('pausedAmbienceSounds', []);
 }
 
+function finishCombatMusic(combat) {
+	if (!isModuleEnabled()) return;
+	return resumeAmbienceMusic(combat);
+}
+
 function pause(sound) {
 	const currentTime = sound.sound?.currentTime ?? null;
 	return sound.update({ playing: false, pausedTime: currentTime });
@@ -61,6 +67,14 @@ function resume(sound) {
 }
 
 export async function updateCombatMusic(combat, music, source) {
+	if (!isModuleEnabled()) {
+		debugLog('updateCombatMusic skipped: module disabled', {
+			combatId: combat?.id,
+			music,
+			source,
+		});
+		return;
+	}
 	debugLog('updateCombatMusic requested', {
 		combatId: combat?.id,
 		music,
@@ -219,6 +233,10 @@ export function getCombatMusicList() {
 }
 
 export async function refreshTurnMusic(combat = game.combat) {
+	if (!isModuleEnabled()) {
+		debugLog('refreshTurnMusic skipped: module disabled', { combatId: combat?.id });
+		return;
+	}
 	const combatPlaylistCount = getCombatMusicList().length;
 	if (!combat || !combat.started || combatPlaylistCount === 0) {
 		debugLog('refreshTurnMusic skipped', {
@@ -249,15 +267,40 @@ export async function refreshTurnMusic(combat = game.combat) {
 
 const debouncedRefreshTurnMusic = debounce(refreshTurnMusic);
 
-window.CombatMusicMaster = {
+const api = {
+	isEnabled: isModuleEnabled,
+	setEnabled: (enabled) => setSetting('enabled', !!enabled),
+	toggleEnabled: async () => {
+		const enabled = !isModuleEnabled();
+		await setSetting('enabled', enabled);
+		ui.notifications.info(`Combat Music Master ${enabled ? 'enabled' : 'disabled'}.`);
+		return enabled;
+	},
 	setCombatMusic,
 	setTokenConfig,
 };
 
+window.CombatMusicMaster = api;
+
+Hooks.on('CMMEnabledChanged', async (enabled) => {
+	debugLog('Module enabled setting changed', { enabled });
+	if (!game.user.isGM || !game.combat?.started) return;
+
+	if (enabled) {
+		pauseAmbienceMusic();
+		await refreshTurnMusic(game.combat);
+	} else {
+		await resumeAmbienceMusic(game.combat);
+	}
+});
+
 Hooks.once('setup', () => {
+	const foundryModule = game.modules.get(MODULE_ID);
+	if (foundryModule) foundryModule.api = api;
+
 	if (game.user.isGM) {
 		Hooks.on('combatStart', pauseAmbienceMusic);
-		Hooks.on('preDeleteCombat', resumeAmbienceMusic);
+		Hooks.on('preDeleteCombat', finishCombatMusic);
 		Hooks.on('combatTurnChange', debouncedRefreshTurnMusic);
 		Hooks.on('deleteCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));
 		Hooks.on('createCombatant', (combatant) => debouncedRefreshTurnMusic(combatant.combat));

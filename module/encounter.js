@@ -1,6 +1,6 @@
 import { DEFAULT_ENCOUNTER_MUSIC_PRIORITY, MODULE_ID } from './constants.js';
 import { createPriorityList, getCombatMusic, parseMusic, refreshTurnMusic, stringifyMusic } from './music-manager.js';
-import { getSetting } from './settings.js';
+import { getSetting, isModuleEnabled } from './settings.js';
 import { createOption } from './token.js';
 import { debugLog } from './utils.js';
 
@@ -144,6 +144,16 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	explainCombatMusicDecision(combat = game.combat) {
+		if (!isModuleEnabled()) {
+			return {
+				started: false,
+				reason: 'Combat Music Master is disabled.',
+				music: '',
+				winner: '',
+				candidates: [],
+			};
+		}
+
 		if (!combat?.started) {
 			return {
 				started: false,
@@ -184,7 +194,7 @@ class CombatMusicInspector extends HandlebarsApplicationMixin(ApplicationV2) {
 				: winner.data.track
 					? `${winner.data.playlist.name} / ${winner.data.track.name}`
 					: winner.data.playlist.name;
-		winnerLabel += ` (${decision.winnerSource})`;
+		if (decision.winnerSource) winnerLabel += ` (${decision.winnerSource})`;
 		const candidates = (decision.candidates ?? []).map((c) => {
 			const parsed = c.parsed;
 			if (!parsed.data) return { ...c, label: `${c.music} (${parsed.error ?? 'empty'})` };

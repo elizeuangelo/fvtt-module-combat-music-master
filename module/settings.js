@@ -2,6 +2,15 @@ import { MODULE_ID } from './constants.js';
 import { exportMusicConfig, importMusicConfig } from './transfer.js';
 
 const settings = {
+	enabled: {
+		name: 'Enable Combat Music Master',
+		hint: 'Globally enable Combat Music Master automation without requiring a reload.',
+		scope: 'world',
+		config: true,
+		type: Boolean,
+		default: true,
+		onChange: (enabled) => Hooks.callAll('CMMEnabledChanged', enabled),
+	},
 	defaultPlaylist: {
 		name: 'Default Playlist',
 		hint: 'Select the default playlist, otherwise one will be selected at random. Reload to update the list.',
@@ -56,9 +65,30 @@ export function getSetting(name) {
 	return game.settings.get(MODULE_ID, name);
 }
 
+export function isModuleEnabled() {
+	try {
+		return game.settings.get(MODULE_ID, 'enabled') !== false;
+	} catch (_error) {
+		return true;
+	}
+}
+
 export function setSetting(name, value) {
 	return game.settings.set(MODULE_ID, name, value);
 }
+
+Hooks.once('init', () => {
+	game.keybindings.register(MODULE_ID, 'toggleEnabled', {
+		name: 'Toggle Combat Music Master',
+		hint: 'Enable or disable Combat Music Master automation.',
+		editable: [],
+		restricted: true,
+		onDown: () => {
+			window.CombatMusicMaster?.toggleEnabled();
+			return true;
+		},
+	});
+});
 
 Hooks.once('setup', () => {
 	for (const [key, setting] of Object.entries(settings)) {

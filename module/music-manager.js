@@ -57,14 +57,15 @@ function finishCombatMusic(combat) {
 	return resumeAmbienceMusic(combat);
 }
 
-function finishCombatMusicIfUnstarted(combat) {
+async function finishCombatMusicIfUnstarted(combat) {
 	if (combat.started) return;
 	debugLog('Combat returned to unstarted state; finishing combat music', {
 		combatId: combat.id,
 		round: combat.round,
 		turn: combat.turn,
 	});
-	return finishCombatMusic(combat);
+	await finishCombatMusic(combat);
+	Hooks.callAll('CMMRefreshInspector');
 }
 
 function pause(sound) {
@@ -294,6 +295,7 @@ window.CombatMusicMaster = api;
 
 Hooks.on('CMMEnabledChanged', async (enabled) => {
 	debugLog('Module enabled setting changed', { enabled });
+	Hooks.callAll('CMMRefreshInspector');
 	if (!game.user.isGM || !game.combat?.started) return;
 
 	if (enabled) {
@@ -302,6 +304,7 @@ Hooks.on('CMMEnabledChanged', async (enabled) => {
 	} else {
 		await resumeAmbienceMusic(game.combat);
 	}
+	Hooks.callAll('CMMRefreshInspector');
 });
 
 Hooks.once('setup', () => {

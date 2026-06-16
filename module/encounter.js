@@ -237,6 +237,9 @@ function addButtonToContextMenu(_combatTracker, options) {
 	}
 }
 
-Hooks.on('CMMRefreshturnMusic', () => {
+function refreshInspector() {
 	CombatMusicInspector.getInstance()?.render(true);
-});
+}
+
+Hooks.on('CMMRefreshturnMusic', refreshInspector);
+Hooks.on('CMMRefreshInspector', refreshInspector);

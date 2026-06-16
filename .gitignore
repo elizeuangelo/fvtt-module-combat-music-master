@@ -1,4 +1,5 @@
 .vscode
 *.lock
 .env
-temp
+temp/
+references/

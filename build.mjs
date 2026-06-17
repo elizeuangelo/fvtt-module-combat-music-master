@@ -82,7 +82,7 @@ function updateFoundryRelease(dryRun = true) {
 	const parameters = {
 		id,
 		release: {
-			version: `v${newVersion}`,
+			version: newVersion,
 			manifest,
 			notes,
 			compatibility,
